@@ -11,7 +11,7 @@ APP_VERSION=2.2.4
 ./gradlew assembleRelease
 cp app/build/outputs/apk/release/app-release.apk bdovore-$APP_VERSION-release.apk
 
-./gradlew bundleRelease
-cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-release.aab
+#./gradlew bundleRelease
+#cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-release.aab
 
 echo "App copied into current directory."

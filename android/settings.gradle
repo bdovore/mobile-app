@@ -1,4 +1,21 @@
+pluginManagement {
+  repositories {
+    gradlePluginPortal()
+    mavenCentral()
+    google()
+  }
+  // IMPORTANT : pointer vers le plugin scopé
+  //includeBuild("../node_modules/@react-native/gradle-plugin")
+  //includeBuild(new File(settingsDir, "../node_modules/@react-native/gradle-plugin"))
+  // Résolution *absolue* et vérifiée du chemin du plugin RN scoped
+  includeBuild(new File(settingsDir, "../node_modules/@react-native/gradle-plugin"))
+}
+
+//plugins {
+//  id("com.facebook.react.settings")
+//}
 rootProject.name = 'bdovore'
-apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesSettingsGradle(settings)
+apply from: file("../node_modules/@react-native-community/cli-platform-android/native_modules.gradle")
+applyNativeModulesSettingsGradle(settings)
+
 include ':app'
-includeBuild('../node_modules/react-native-gradle-plugin')

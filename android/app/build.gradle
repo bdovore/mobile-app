@@ -89,11 +89,11 @@ def reactNativeArchitectures() {
 }
 
 android {
-    ndkVersion rootProject.ext.ndkVersion
+    ndkVersion=rootProject.ext.ndkVersion
 
-    compileSdkVersion rootProject.ext.compileSdkVersion
+    compileSdkVersion=rootProject.ext.compileSdkVersion
 
-    namespace "com.mobileapp.bdovore"
+    namespace="com.mobileapp.bdovore"
     defaultConfig {
         applicationId "com.mobileapp.bdovore"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -106,8 +106,8 @@ android {
     splits {
         abi {
             reset()
-            enable enableSeparateBuildPerCPUArchitecture
-            universalApk false  // If true, also generate a universal APK
+            enable=enableSeparateBuildPerCPUArchitecture
+            universalApk=false  // If true, also generate a universal APK
             include (*reactNativeArchitectures())
         }
     }
@@ -129,13 +129,13 @@ android {
     }
     buildTypes {
         debug {
-            signingConfig signingConfigs.debug
+            signingConfig=signingConfigs.debug
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
             // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.release
-            minifyEnabled enableProguardInReleaseBuilds
+            signingConfig=signingConfigs.release
+            minifyEnabled=enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
     }
@@ -179,3 +179,4 @@ dependencies {
 apply from: file("../../node_modules/@react-native-community/cli-platform-android/native_modules.gradle"); applyNativeModulesAppBuildGradle(project)
 
 apply from: "../../node_modules/react-native-vector-icons/fonts.gradle"
+apply plugin: "com.facebook.react"
