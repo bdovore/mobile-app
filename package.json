@@ -16,6 +16,8 @@
     "@react-navigation/bottom-tabs": "^6.3.1",
     "@react-navigation/native": "^6.0.10",
     "@react-navigation/stack": "^6.2.1",
+    "@rneui/base": "^4.0.0-rc.8",
+    "@rneui/themed": "^4.0.0-rc.8",
     "deprecated-react-native-prop-types": "^2.3.0",
     "react": "19.1.0",
     "react-native": "0.81.1",

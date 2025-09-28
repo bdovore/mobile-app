@@ -29,12 +29,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { ButtonGroup, SearchBar } from 'react-native-elements';
+//import { ButtonGroup, SearchBar } from 'react-native-elements';
+import { SearchBar, ButtonGroup } from '@rneui/themed';
 
 import { AlbumItem } from '../components/AlbumItem';
 import { AuteurItem } from '../components/AuteurItem';
 import { AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import { SerieItem } from '../components/SerieItem';
 import * as APIManager from '../api/APIManager';
@@ -183,6 +185,21 @@ function SearchScreen({ navigation }) {
           <View style={{ flex: 1 }}>
             <SearchBar
               placeholder={parseInt(searchMode) == 0 ? 'Nom de la série...' : parseInt(searchMode) == 1 ? "Nom de l'album ou ISBN..." : "Nom de l'auteur..."}
+              searchIcon={
+                <Ionicons
+                  name="search"
+                  size={20}
+                  color="#888"
+                />}
+               clearIcon={
+                keywords ?
+                  <Ionicons
+                    name="close-circle"  // ou "close" pour une croix simple
+                    size={20}
+                    color="#888"
+                    onPress={onSearchCancel} 
+                  /> : null
+                }
               onChangeText={onSearch}
               onCancel={onSearchCancel}
               onClear={onSearchCancel}

@@ -53,7 +53,7 @@ import SerieScreen from '../screens/SerieScreen';
 import CollectionStatScreen from '../screens/CollectionStatScreen';
 import ToCompleteScreen from '../screens/ToCompleteScreen';
 import WishlistScreen from '../screens/WishlistScreen';
-
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 
 // The main tab navigator
@@ -70,7 +70,7 @@ const CommentsStack = createStackNavigator();
 
 const ShareIcon = () => (
   Platform.OS == 'ios' ?
-    <Icon name='Ionicons/ios-share-outline' size={25} color={CommonStyles.iconStyle.color} /> :
+    <Ionicons name='share-outline' size={25} color={CommonStyles.iconStyle.color} /> :
     <Icon name='Ionicons/share-social-outline' size={25} color={CommonStyles.iconStyle.color} />);
 
 const onShareCollectionPress = () => {
@@ -529,6 +529,9 @@ function CoreTab() {
     return false;
   }
 
+  const onToggleBurgerMenuPanel = () => {
+    setShowBurgerMenuPanel(prevState => !prevState); // Inverse l'état actuel
+  };
   const onShowBurgerMenuPanel = () => {
     setShowBurgerMenuPanel(true);
   }
@@ -605,8 +608,8 @@ function CoreTab() {
           component={SearchScreens}
           options={{
             tabBarButton: props => <TouchableOpacity {...props}
-              onLongPress={onShowBurgerMenuPanel}
-              onPress={onShowBurgerMenuPanel}
+              onLongPress={onToggleBurgerMenuPanel}
+              onPress={onToggleBurgerMenuPanel}
               style={{
                 color: isMoreItemEnabled() ? (global.isDarkMode ? bdovorlightred : bdovored) : 'gray', width: 40
               }} />,
