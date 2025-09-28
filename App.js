@@ -59,7 +59,7 @@ const App: () => Node = () => {
   return (
     <NavigationContainer theme={global.isDarkMode ? DarkTheme : DefaultTheme}>
       <MainTab />
-      <Toast ref={(ref) => Toast.setRef(ref)} />
+      <Toast ref={(ref) => ToastRef = ref} />
     </NavigationContainer>
   );
 };
