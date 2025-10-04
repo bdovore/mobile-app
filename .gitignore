@@ -45,7 +45,8 @@ android/app/bdovore-upload-command-line.txt
 android/app/encrypted_private_key_path
 android/bdovore-android-keystore.rar
 android/make.bat
-
+android/.kotlin/*
+android/app/.cxx/*
 # node.js
 #
 node_modules/
