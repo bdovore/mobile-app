@@ -544,12 +544,21 @@ function CoreTab() {
 
   return (
     <View style={{ flex: 1 }}>
-      <Tab.Navigator
-        initialRouteName='Ma collection'
-        screenOptions={{ gestureEnabled: false, headerShown: false }}
-        tabBarOptions={{ activeTintColor: global.isDarkMode ? bdovorlightred : bdovored }}
-        animationEnabled={true}
-      >
+    <Tab.Navigator
+      initialRouteName='Ma collection'
+      screenOptions={{
+        gestureEnabled: false,
+        headerShown: false,
+        tabBarActiveTintColor: global.isDarkMode ? bdovorlightred : bdovored,
+        tabBarStyle: [
+          {
+            display: "flex"
+          },
+          null
+        ]
+      }}
+      animationEnabled={true}
+    >
         <Tab.Screen
           name='Ma collection'
           component={CollectionScreens}
@@ -662,7 +671,8 @@ const RootStack = createStackNavigator();
 
 function MainTab() {
   return (
-    <RootStack.Navigator mode="modal" headerMode="none" >
+    <RootStack.Navigator
+      screenOptions={{ presentation: "modal", headerShown: false }}>
       <RootStack.Screen name="CoreTab" component={CoreTab} />
       <RootStack.Screen name="Login" component={LoginScreen} />
       <RootStack.Screen name="Image" component={ImageScreen} />

@@ -33,12 +33,6 @@ import { CommonStyles } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
 
 
-if (Platform.OS === 'android') {
-  if (UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
-
 export function CollapsableSection({ props, sectionName, isCollapsed = false, style = null, collapsable = true, children, onCollapse = (v) =>{}, noAnimation = false }) {
 
   const [collasped, setCollapsed] = useState(isCollapsed);

@@ -36,12 +36,6 @@ import CollectionManager from '../api/CollectionManager';
 import { Icon } from '../components/Icon';
 
 
-if (Platform.OS === 'android') {
-  if (UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
-
 const CustomLayoutSpring = {
   duration: 300,
   create: {
