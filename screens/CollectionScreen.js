@@ -47,6 +47,7 @@ const defaultSortMode = 1;
 const sortModes = {
   0: 'Tri par série',
   1: 'Tri par date d\'ajout',
+  2: 'Tri par note'
 }
 
 const serieFilterModes = {
@@ -188,10 +189,10 @@ function CollectionScreen({ route, navigation }) {
 
   const applyFilters = () => {
     if (stateRefKeywords.current == '' && collectionGenre == 0 && filterMode == 0) {
-      setFilteredAlbums(sortMode == 1 ? Helpers.sliceSortByDate(CollectionManager.getAlbums()) : null);
+      setFilteredAlbums(sortMode == 1 ? Helpers.sliceSortByDate(CollectionManager.getAlbums()) : (sortMode == 2 ? Helpers.sliceSortByUserRating(CollectionManager.getAlbums()) : null));
     } else {
       const filteredAlbums = filterCollection(CollectionManager.getAlbums(collectionGenre), 1);
-      setFilteredAlbums(sortMode == 1 ? Helpers.sliceSortByDate(filteredAlbums) : filteredAlbums);
+      setFilteredAlbums(sortMode == 1 ? Helpers.sliceSortByDate(filteredAlbums) : (sortMode == 2 ? Helpers.sliceSortByUserRating(filteredAlbums) : filteredAlbums));
     }
 
     if (stateRefKeywords.current == '' && collectionGenre == 0 && serieFilterMode == 0) {

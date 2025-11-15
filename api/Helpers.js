@@ -32,6 +32,7 @@ import Toast from 'react-native-toast-message';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { CommonStyles } from '../styles/CommonStyles';
+import { func } from '../node_modules__/joi/lib';
 
 
 // Returns true if the screen is in portrait mode
@@ -152,6 +153,15 @@ export function sortByDate(data, field = 'DATE_AJOUT') {
   return data;
 }
 
+export function sortByUserRating(data, field = 'NOTE') {
+  data.sort(function (item1, item2) {
+    if (!item1 || !item1[field]) return 1;
+    if (!item2 || !item2[field]) return -1;
+    return item2[field] - item1[field];
+  });
+  return data;
+}
+
 export function filterAlbumsWithSearchKeywords(albums, keywords = '') {
   if (keywords == '') return albums;
   const kw = lowerCaseNoAccentuatedChars(keywords);
@@ -173,6 +183,10 @@ export function getNowDateString() {
 
 export function sliceSortByDate(data, field = 'DATE_AJOUT') {
   return sortByDate(data.slice(), field);
+}
+
+export function sliceSortByUserRating(data, field = 'NOTE_PERSO') {
+  return sortByUserRating(data.slice(), field);
 }
 
 export function sortByAscendingValue(data, field = 'NUM_TOME') {
