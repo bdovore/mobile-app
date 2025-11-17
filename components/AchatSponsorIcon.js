@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React from 'react';
-import { Image, Linking, TouchableOpacity, View } from 'react-native';
+import React, { useMemo } from 'react';
+import { FlatList, Image, Linking, TouchableOpacity } from 'react-native';
 
 import { CommonStyles } from '../styles/CommonStyles';
 
@@ -54,27 +54,26 @@ const defaultSponsors = [
 ];
 
 export function AchatSponsorIcon({ album, style }) {
-  console.log(global.sponsorsList);
-
   // Sponsored links are disabled on iOS according AppStore rules.
   if (global.hideSponsoredLinks || !global.isConnected) return null;
 
-  const sponsorsList = global.sponsorsList
-    ? JSON.parse(global.sponsorsList)
-    : defaultSponsors;
-  if (sponsorsList == null || sponsorsList.length == 0) {
-    sponsorsList = defaultSponsors;
+  let sponsorsList = defaultSponsors;
+  if (global.sponsorsList) {
+    try {
+      const parsedList = JSON.parse(global.sponsorsList);
+      if (Array.isArray(parsedList) && parsedList.length > 0) {
+        sponsorsList = parsedList;
+      }
+    } catch (error) {
+      console.debug('Unable to parse sponsors list', error);
+    }
   }
 
-  // Pick 2 random sponsors to show and generate links
-  const shuffled = sponsorsList.sort(() => 0.5 - Math.random());
-  const selected = shuffled.slice(0, 2);
-
-  return (
-    <View style={{flexDirection: 'row', marginTop: 10}}>
-      {selected.map(sponsor => {
+  const sponsorsWithLinks = useMemo(() => {
+    const shuffled = [...sponsorsList].sort(() => 0.5 - Math.random());
+    return shuffled
+      .map((sponsor) => {
         let url = null;
-        console.log(sponsor);
         if (sponsor.patterns.ean && album.EAN_EDITION) {
           url = sponsor.patterns.ean.replace('{ean}', album.EAN_EDITION);
         } else if (sponsor.patterns.isbn && album.ISBN_EDITION) {
@@ -85,22 +84,36 @@ export function AchatSponsorIcon({ album, style }) {
             encodeURIComponent(album.TITRE_TOME),
           );
         }
-        console.log(url);
-        return url ? (
-          <TouchableOpacity
-            key={sponsor.label}
-            onPress={() => {
-              Linking.openURL(url);
-            }}
-            title={sponsor.title}>
-            <Image
-              source={{uri: sponsor.logo}}
-              style={CommonStyles.sponsorIcon}
-            />
-          </TouchableOpacity>
-        ) : null;
-      })}
-    </View>
+        return url ? { ...sponsor, url } : null;
+      })
+      .filter(Boolean);
+  }, [album, sponsorsList]);
+
+  if (sponsorsWithLinks.length === 0) {
+    return null;
+  }
+
+  const renderItem = ({ item }) => (
+    <TouchableOpacity
+      onPress={() => Linking.openURL(item.url)}
+      title={item.title}
+      style={{ marginRight: 16 }}>
+      <Image
+        source={{ uri: item.logo }}
+        style={CommonStyles.sponsorIcon}
+      />
+    </TouchableOpacity>
+  );
+
+  return (
+    <FlatList
+      style={[{ marginTop: 10 }, style]}
+      data={sponsorsWithLinks}
+      horizontal
+      keyExtractor={(item) => item.label}
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ alignItems: 'center' }}
+      renderItem={renderItem}
+    />
   );
 }
-
