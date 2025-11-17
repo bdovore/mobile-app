@@ -26,26 +26,132 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React from 'react';
-import { ActivityIndicator, Dimensions, Image, Text, TouchableWithoutFeedback, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'react-native-elements';
 
 import { CommonStyles } from '../styles/CommonStyles';
+import { Icon } from '../components/Icon';
 
+const screen = Dimensions.get('window');
+const MAX_SCALE = 4;
 
 function ImageScreen({ route, navigation }) {
+  const insets = useSafeAreaInsets();
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const scaleRef = useRef(1);
+  const lastScale = useRef(1);
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const lastTranslate = useRef({ x: 0, y: 0 });
+  const [panEnabled, setPanEnabled] = useState(false);
+
+  const resetPan = () => {
+    lastTranslate.current = { x: 0, y: 0 };
+    translateX.setValue(0);
+    translateY.setValue(0);
+  };
+
+  const clampScale = (value) => Math.max(1, Math.min(value, MAX_SCALE));
+
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      const nextScale = clampScale(lastScale.current * event.scale);
+      scaleRef.current = nextScale;
+      scaleValue.setValue(nextScale);
+    })
+    .onFinalize(() => {
+      lastScale.current = scaleRef.current;
+      const allowPan = lastScale.current > 1;
+      setPanEnabled(allowPan);
+      if (!allowPan) {
+        resetPan();
+      }
+    });
+
+  const panGesture = Gesture.Pan()
+    .enabled(panEnabled)
+    .onUpdate((event) => {
+      const nextX = lastTranslate.current.x + event.translationX;
+      const nextY = lastTranslate.current.y + event.translationY;
+      translateX.setValue(nextX);
+      translateY.setValue(nextY);
+    })
+    .onFinalize((event) => {
+      lastTranslate.current = {
+        x: lastTranslate.current.x + (event?.translationX ?? 0),
+        y: lastTranslate.current.y + (event?.translationY ?? 0),
+      };
+    });
+
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
+
   return (
-    <View style={{ backgroundColor: 'black', height: '100%', width: '100%' }}>
-      <TouchableWithoutFeedback onPress={() => { navigation.goBack(); }}>
-        <Image
-          source={{ uri: route.params.source }}
-          style={[{ resizeMode: 'contain', width: Dimensions.get('window').width, height: Dimensions.get('window').height }]}
-          PlaceholderContent={<ActivityIndicator size='small' color='white' />} />
-      </TouchableWithoutFeedback>
-        {route.params.copyright ?
-          <Text style={[CommonStyles.smallerText, { color: 'gray', position: 'absolute', bottom: 4, left: 4 }]}>© {route.params.copyright}</Text> :
-          null}
+    <View style={styles.container}>
+      <TouchableOpacity
+        onPress={() => navigation.goBack()}
+        style={[styles.closeButton, { top: insets.top + 12, right: 16 }]}
+        accessibilityRole='button'
+        accessibilityLabel='Fermer'>
+        <Icon name='Ionicons/close' size={28} color='white' />
+      </TouchableOpacity>
+      <GestureDetector gesture={composedGesture}>
+        <Animated.View style={styles.flex}>
+          <Animated.View style={[
+            styles.flex,
+            {
+              transform: [
+                { scale: scaleValue },
+                { translateX },
+                { translateY },
+              ],
+            }
+          ]}>
+            <Image
+              source={{ uri: route.params.source }}
+              style={styles.image}
+              resizeMode='contain'
+              PlaceholderContent={<ActivityIndicator size='small' color='white' />}
+            />
+          </Animated.View>
+        </Animated.View>
+      </GestureDetector>
+      {route.params.copyright ?
+        <Text style={[CommonStyles.smallerText, styles.copyright]}>
+          © {route.params.copyright}
+        </Text> :
+        null}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: 'black',
+    flex: 1,
+  },
+  flex: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  image: {
+    width: screen.width,
+    height: screen.height,
+  },
+  closeButton: {
+    position: 'absolute',
+    zIndex: 2,
+    padding: 8,
+  },
+  copyright: {
+    color: 'gray',
+    position: 'absolute',
+    bottom: 4,
+    left: 4,
+  },
+});
 
 export default ImageScreen;
