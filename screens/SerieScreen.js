@@ -315,6 +315,7 @@ function SerieScreen({ route, navigation }) {
           style={{ flex: 1, marginTop: 5, marginHorizontal: 1 }}
           ref={sectionListRef}
           maxToRenderPerBatch={10}
+          disableVirtualization={true}
           windowSize={10}
           sections={serieAlbums.filter(s => s.data.length > 0).map((section, index) => ({ ...section, index }))}
           keyExtractor={keyExtractor}
