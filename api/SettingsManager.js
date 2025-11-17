@@ -48,6 +48,7 @@ let globs = [
   ['showBDovoreIds',         false],
   ['showConnectionMessages', false],
   ['showExcludedAlbums',     true],
+  ['sponsorsList',           null],
   ['verbose',                false],
 ];
 

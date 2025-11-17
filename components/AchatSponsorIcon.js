@@ -31,25 +31,76 @@ import { Image, Linking, TouchableOpacity, View } from 'react-native';
 
 import { CommonStyles } from '../styles/CommonStyles';
 
+const defaultSponsors = [
+  {
+    label: 'BDfugue',
+    title: 'Achetez sur BDfugue !',
+    logo: 'https://www.bdovore.com/images/bdfugue.png',
+    patterns: {
+      ean: 'https://www.bdfugue.com/a/?ref=295&ean={ean}',
+      title: 'https://www.bdfugue.com/catalogsearch/result/?ref=295&q={title}',
+    },
+  },
+  {
+    label: 'Amazon',
+    title: 'Achetez sur Amazon !',
+    logo: 'https://www.bdovore.com/images/amazon%20blanc.jpg',
+    patterns: {
+      isbn: 'https://www.amazon.fr/exec/obidos/ASIN/{isbn}/bdovorecom-21/',
+      title:
+        'https://www.amazon.fr/exec/obidos/external-search?tag=bdovorecom-21&keyword={title}&mode=books-fr',
+    },
+  },
+];
 
 export function AchatSponsorIcon({ album, style }) {
+  console.log(global.sponsorsList);
+
+  // Sponsored links are disabled on iOS according AppStore rules.
+  if (global.hideSponsoredLinks || !global.isConnected) return null;
+
+  const sponsorsList = global.sponsorsList
+    ? JSON.parse(global.sponsorsList)
+    : defaultSponsors;
+  if (sponsorsList == null || sponsorsList.length == 0) {
+    sponsorsList = defaultSponsors;
+  }
+
+  // Pick 2 random sponsors to show and generate links
+  const shuffled = sponsorsList.sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 2);
+
   return (
-    (global.hideSponsoredLinks || !global.isConnected) ? null : // Sponsored links are disabled on iOS according AppStore rules.
-      <View style={{ flexDirection: 'row', marginTop: 10 }}>
-        {album.EAN_EDITION ? <TouchableOpacity
-          onPress={() => { Linking.openURL('https://www.bdfugue.com/a/?ean=' + album.EAN_EDITION + "&ref=295"); }}
-          title="Acheter sur BDFugue" >
-          <Image source={require('../assets/bdfugue.png')} style={CommonStyles.bdfugueIcon} />
-        </TouchableOpacity> : null}
-        <TouchableOpacity
-          onPress={() => {
-            Linking.openURL(album.ISBN_EDITION ?
-              ('https://www.amazon.fr/exec/obidos/ASIN/' + album.ISBN_EDITION + "/bdovorecom-21/") :
-              encodeURI('https://www.amazon.fr/exec/obidos/external-search?tag=bdovorecom-21&mode=books-fr&keyword=' + album.TITRE_TOME));
-          }}
-          title="Acheter sur Amazon" >
-          <Image source={require('../assets/amazon.png')} style={CommonStyles.amazonIcon} />
-        </TouchableOpacity>
-      </View>);
+    <View style={{flexDirection: 'row', marginTop: 10}}>
+      {selected.map(sponsor => {
+        let url = null;
+        console.log(sponsor);
+        if (sponsor.patterns.ean && album.EAN_EDITION) {
+          url = sponsor.patterns.ean.replace('{ean}', album.EAN_EDITION);
+        } else if (sponsor.patterns.isbn && album.ISBN_EDITION) {
+          url = sponsor.patterns.isbn.replace('{isbn}', album.ISBN_EDITION);
+        } else if (sponsor.patterns.title) {
+          url = sponsor.patterns.title.replace(
+            '{title}',
+            encodeURIComponent(album.TITRE_TOME),
+          );
+        }
+        console.log(url);
+        return url ? (
+          <TouchableOpacity
+            key={sponsor.label}
+            onPress={() => {
+              Linking.openURL(url);
+            }}
+            title={sponsor.title}>
+            <Image
+              source={{uri: sponsor.logo}}
+              style={CommonStyles.sponsorIcon}
+            />
+          </TouchableOpacity>
+        ) : null;
+      })}
+    </View>
+  );
 }
 
