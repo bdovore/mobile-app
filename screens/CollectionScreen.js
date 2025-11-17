@@ -53,6 +53,10 @@ const serieFilterModes = {
   0: 'Toutes',
   1: 'Complètes',
   2: 'Incomplètes',
+  3: 'One shot',
+  4: 'Terminées',
+  5: 'En cours',
+  6: 'Interrompues',
 }
 
 const filterModes = {
@@ -73,6 +77,10 @@ const filterModesSeriesSearch = {
   0: 'Rechercher dans mes{0}...',
   1: 'Rechercher dans mes{0} complètes...',
   2: 'Rechercher dans mes{0} incomplètes...',
+  3: 'Rechercher dans mes{0} one shot...',
+  4: 'Rechercher dans mes{0} terminées...',
+  5: 'Rechercher dans mes{0} en cours...',
+  6: 'Rechercher dans mes{0} interrompues...',
 }
 
 let cachedToken = '';
@@ -170,8 +178,16 @@ function CollectionScreen({ route, navigation }) {
         const fMode = parseInt(serieFilterMode);
         if (fMode > 0) {
           const isComplete = CollectionManager.isSerieComplete(item.ID_SERIE);
-          if (fMode == 1) return isComplete;
-          if (fMode == 2) return !isComplete;
+          const flagStatus = item.LIB_FLG_FINI_SERIE;
+          switch (fMode) {
+            case 1: return isComplete;
+            case 2: return !isComplete;
+            case 3: return flagStatus == 'One Shot';
+            case 4: return flagStatus == 'Fini';
+            case 5: return flagStatus == 'En cours';
+            case 6: return flagStatus == 'Interrompue';
+            default: return false;
+          }
         }
       }
       else {
