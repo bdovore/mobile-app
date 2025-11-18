@@ -3,13 +3,6 @@ module.exports = {
         ios: {},
         android: {
             packageName: 'com.mobileapp.bdovore',
-        },
-    },
-    dependencies: {
-      'react-native-vector-icons': {
-        platforms: {
-          ios: null,
-        },
-      },
+        }
     }
 };

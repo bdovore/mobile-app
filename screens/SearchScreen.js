@@ -27,8 +27,9 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, Text, TouchableOpacity, View, Linking } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import { InAppBrowser } from 'react-native-inappbrowser-reborn';
 //import { ButtonGroup, SearchBar } from 'react-native-elements';
 import { SearchBar, ButtonGroup } from '@rneui/themed';
 
@@ -178,6 +179,10 @@ function SearchScreen({ navigation }) {
     index
   }), []);
 
+  const onAddProposition =  async () => {
+    APIManager.addProposition(keywords)
+  };
+
   return (
     <View style={CommonStyles.screenStyle}>
       <View>
@@ -239,36 +244,54 @@ function SearchScreen({ navigation }) {
           />
         </View>
       </View>
-      {global.isConnected ?
-        <View style={{ flex: 1, marginHorizontal: 1 }}>
-          {errortext ? (
-            <Text style={CommonStyles.errorTextStyle}>
-              {errortext}
-            </Text>
-          ) : null}
-          {loading ? <LoadingIndicator style={{ height: '100%' }} /> : (
-            <FlatList
-              maxToRenderPerBatch={10}
-              windowSize={10}
-              data={data}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              getItemLayout={getItemLayout}
-              ItemSeparatorComponent={Helpers.renderSeparator}
-              extraData={toggleElement}
-            />)}
-        </View> :
-        <View style={[CommonStyles.screenStyle, { alignItems: 'center', height: '50%', flexDirection: 'column' }]}>
-          <View style={{ flex: 1 }}></View>
-          <Text style={CommonStyles.defaultText}>Recherche indisponible en mode non-connecté.{'\n'}</Text>
-          <Text style={CommonStyles.defaultText}>Rafraichissez cette page une fois connecté.</Text>
-          <TouchableOpacity style={{ flexDirection: 'column', marginTop: 20 }} onPress={onSearch}>
-            <Icon name='refresh' size={50} color={CommonStyles.markIconDisabled.color} />
-          </TouchableOpacity>
-          <View style={{ flex: 1 }}></View>
-        </View>}
-    </View>
-  );
+    {global.isConnected ?
+       <View style={{ flex: 1, marginHorizontal: 1 }}>
+        {errortext ? (
+          <Text style={CommonStyles.errorTextStyle}>
+            {errortext}
+          </Text>
+        ) : null}
+        {loading ? <LoadingIndicator style={{ height: '100%' }} /> : (
+          <FlatList
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            data={data}
+            keyExtractor={keyExtractor}
+            renderItem={renderItem}
+            getItemLayout={getItemLayout}
+            ItemSeparatorComponent={Helpers.renderSeparator}
+            extraData={toggleElement}
+          />
+        )}
+    
+        {/* Bouton "Proposer un ajout" */}
+        {keywords && !loading ? (
+          <View style={{ 
+            padding: 15, 
+            backgroundColor: CommonStyles.screenStyle.backgroundColor,
+            borderTopWidth: 1,
+            borderTopColor: '#ccc'
+          }}>
+            <Text 
+              onPress={onAddProposition} 
+              style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>
+                Rien trouvé ? Proposer un ajout
+              </Text>
+            
+          </View>
+        ) : null}
+      </View>:
+            <View style={[CommonStyles.screenStyle, { alignItems: 'center', height: '50%', flexDirection: 'column' }]}>
+              <View style={{ flex: 1 }}></View>
+              <Text style={CommonStyles.defaultText}>Recherche indisponible en mode non-connecté.{'\n'}</Text>
+              <Text style={CommonStyles.defaultText}>Rafraichissez cette page une fois connecté.</Text>
+              <TouchableOpacity style={{ flexDirection: 'column', marginTop: 20 }} onPress={onSearch}>
+                <Icon name='refresh' size={50} color={CommonStyles.markIconDisabled.color} />
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}></View>
+            </View>}
+        </View>
+      );
 }
 
 export default SearchScreen;
