@@ -129,6 +129,8 @@ function BarcodeScanner({ route, navigation }) {
                 Helpers.showToast(true,
                   "Aucun album trouvé",
                   "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.");
+                setShowPropositionButton(true);
+                setLastScannedEan(ean);
               }
               eanFound = false;
               setLoading(false);
@@ -194,16 +196,7 @@ function BarcodeScanner({ route, navigation }) {
                 </Text>))}
           </Text>
         </View>
-        {showPropositionButton && (
-          <View style={{ position: "absolute", left: 0, bottom: 5 }}>
-            <TouchableOpacity
-              onPress={() => openPropositionForm(lastScannedEan)}
-              style={styles.cameraIcon}
-            >
-              <Icon name='MaterialIcons/add-circle' size={30} color={bdovored} />
-            </TouchableOpacity>
-          </View>
-        )}
+        
       </Camera>
       <View style={{ position: "absolute", right: 0, bottom: 5 }}>
         <TouchableOpacity onPress={onAutoAddModePress}>
@@ -215,6 +208,16 @@ function BarcodeScanner({ route, navigation }) {
           <Icon name={torchOn ? 'Ionicons/flashlight' : 'Ionicons/flashlight-outline'} size={30} color={torchOn ? 'orange' : 'black'} style={styles.cameraIcon} />
         </TouchableOpacity>
       </View>
+      {showPropositionButton && (
+          <View style={{ position: "absolute", left: 0, bottom: 5 }}>
+            <TouchableOpacity
+              onPress={() => openPropositionForm(lastScannedEan)}
+              style={styles.cameraIcon}
+            >
+              <Icon name='MaterialIcons/add-circle' size={30} color={bdovored} />
+            </TouchableOpacity>
+          </View>
+        )}
     </View>
   );
 };
