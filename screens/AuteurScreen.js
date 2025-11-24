@@ -191,6 +191,7 @@ function AuteurScreen({ route, navigation }) {
         style={{ flex: 1, marginHorizontal: 1 }}
         maxToRenderPerBatch={10}
         windowSize={10}
+        disableVirtualization={true}
         sections={auteurAlbums}
         keyExtractor={keyExtractor}
         renderItem={renderAlbum}
