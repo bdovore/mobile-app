@@ -515,8 +515,6 @@ function AlbumScreen({ route, navigation }) {
           <TouchableOpacity name='Ajouter nouvelle édition'  style={{ position: 'absolute', bottom: 0, right: 50 }}>
             <Button onPress={onSubmitNewEdition} type="clear" icon={<Icon name='comment-plus-outline' size={25} color={'lightgrey'} />} />
           </TouchableOpacity>
-
-          <AchatSponsorIcon album={album} />
         </CollapsableSection>
 
         {album.HISTOIRE_TOME ?
@@ -524,6 +522,11 @@ function AlbumScreen({ route, navigation }) {
             <Text style={[CommonStyles.defaultText, { textAlign: 'justify' }]}>
               {Helpers.removeHTMLTags(album.HISTOIRE_TOME)}
             </Text>
+          </CollapsableSection> : null}
+
+        {!global.hideSponsoredLinks && global.isConnected ?
+          <CollapsableSection sectionName='Acheter en ligne'>
+            <AchatSponsorIcon album={album} />
           </CollapsableSection> : null}
 
         {similAlbums.length > 0 ?

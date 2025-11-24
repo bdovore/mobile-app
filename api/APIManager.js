@@ -203,6 +203,14 @@ export function loginBDovore(pseudo, passwd, callback) {
         console.debug(error);
       }
     })
+    .then(() => {
+      fetchSponsors((result) => {
+        if (result.error == '') {
+        //console.log("Fetched sponsors: ");
+        //console.log(result.items);
+        Helpers.setAndSaveGlobal('sponsorsList', JSON.stringify(result.items));
+        }
+    })})
     .catch((error) => {
       console.debug(error);
       Helpers.showToast(true,
@@ -520,6 +528,20 @@ export async function fetchAuteurByTerm(term, callback, params = {}) {
       mode: 2
     }, ...params
   });
+}
+
+export async function fetchSponsors(callback, params = {}) {
+  const url = bdovoreBaseURL + '/sponsors';
+
+  fetchZIP(url)
+    .then(response => response.json())
+    .then(json => {
+      callback({ error: '', items: json, nbItems: Object.keys(json).length, });
+    })
+    .catch((error) => {
+      console.debug('==> error : ' + error.toString())
+      callback({ error: error.toString(), items: [], nbItems: 0 });
+    });
 }
 
 export async function updateCollection(func, callback, params = {}) {

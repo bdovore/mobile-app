@@ -117,16 +117,12 @@ export let CommonStyles = EStyleSheet.create({
     width: 90,
     height: 122,
   },
-  bdfugueIcon: {
-    width: 200/2,
-    height: 65/2,
-    marginRight: 40,
-  },
-  amazonIcon: {
-    width: 365/4,
-    height: 130/4,
+  sponsorIcon: {
+    height: 33,
+    aspectRatio: 4,
     borderWidth: StyleSheet.hairlineWidth * 2,
-    borderColor: 'lightgrey'
+    borderColor: 'lightgrey',
+    marginRight: 10
   },
   iconStyle: {
     color: '$textcolor', // #222
@@ -463,7 +459,7 @@ export let CommonStyles = EStyleSheet.create({
   verticalSeparatorStyle: {
     borderRightColor: '$buttongroupcolor',
     borderRightWidth: StyleSheet.hairlineWidth * 2,
-  },
+  }
 
 });
 
