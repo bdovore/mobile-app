@@ -28,7 +28,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { RNCamera } from 'react-native-camera';
+import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 
 import CollectionManager from '../api/CollectionManager';
 import { CommonStyles, bdovored } from '../styles/CommonStyles';
@@ -44,13 +44,25 @@ function BarcodeScanner({ route, navigation }) {
   const [loading, setLoading] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [nbAddedAlbums, setNbAddedAlbums] = useState(0);
+  const [showPropositionButton, setShowPropositionButton] = useState(false);
+  const [lastScannedEan, setLastScannedEan] = useState('');
   const [lastAddedAlbum, setLastAddedAlbum] = useState('');
+  const [hasPermission, setHasPermission] = useState(false);
+
+  const device = useCameraDevice('back');
 
   useEffect(() => {
     const willFocusSubscription = navigation.addListener('focus', () => {
       eanFound = false;
     });
     return willFocusSubscription;
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      const cameraPermission = await Camera.requestCameraPermission();
+      setHasPermission(cameraPermission === 'granted');
+    })();
   }, []);
 
   const searchAndAddAlbumWithEAN = (ean) => {
@@ -79,6 +91,8 @@ function BarcodeScanner({ route, navigation }) {
           Helpers.showToast(true,
             "Aucun album trouvé avec ce code",
             "Essayez la recherche textuelle avec le nom de la série ou de l'album");
+          setShowPropositionButton(true);
+          setLastScannedEan(ean);
         }
         eanFound = false;
         setLoading(false);
@@ -88,40 +102,44 @@ function BarcodeScanner({ route, navigation }) {
     }
   }
 
-  const onBarCodeRead = (e) => {
-    const ean = e.data;
-    //console.log('ean detected ' + ean + ' ' + eanFound);
-    if (!eanFound && ean) {
-      eanFound = true; // needed to avoid reentry
-      if (autoAddMode) {
-        if (global.isConnected) {
-          searchAndAddAlbumWithEAN(ean);
-        } else {
-          Helpers.showToast(true,
-            "Connexion internet désactivée",
-            "Rechercher de l'album impossible");
-          eanFound = false;
-        }
-      } else {
-        setLoading(true);
-        let params = (ean.length > 10) ? { EAN: ean } : { ISBN: ean };
-        APIManager.fetchAlbum((result) => {
-          if (result.error == '' && result.items.length > 0) {
-            navigation.goBack();
-            navigation.push('Album', { item: result.items[0] })
+  const codeScanner = useCodeScanner({
+    codeTypes: ['ean-13', 'ean-8'],
+    onCodeScanned: (codes) => {
+      if (codes.length > 0 && !eanFound) {
+        const ean = codes[0].value;
+        if (!eanFound && ean) {
+          eanFound = true;
+          if (autoAddMode) {
+            if (global.isConnected) {
+              searchAndAddAlbumWithEAN(ean);
+            } else {
+              Helpers.showToast(true,
+                "Connexion internet désactivée",
+                "Rechercher de l'album impossible");
+              eanFound = false;
+            }
           } else {
-            Helpers.showToast(true,
-              "Aucun album trouvé",
-              "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.");
+            setLoading(true);
+            let params = (ean.length > 10) ? { EAN: ean } : { ISBN: ean };
+            APIManager.fetchAlbum((result) => {
+              if (result.error == '' && result.items.length > 0) {
+                navigation.goBack();
+                navigation.push('Album', { item: result.items[0] })
+              } else {
+                Helpers.showToast(true,
+                  "Aucun album trouvé",
+                  "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.");
+                setShowPropositionButton(true);
+                setLastScannedEan(ean);
+              }
+              eanFound = false;
+              setLoading(false);
+            }, params);
           }
-          eanFound = false;
-          setLoading(false);
-        }, params);
+        }
       }
-      /*route.params.onGoBack(ean);
-      }*/
     }
-  }
+  });
 
   const onTorchPress = () => {
     setTorchOn(!torchOn);
@@ -131,21 +149,37 @@ function BarcodeScanner({ route, navigation }) {
     setAutoAddMode(global.isConnected ? !autoAddMode : false);
   }
 
+  const openPropositionForm = async (ean) => {
+    APIManager.addProposition(ean)
+  }
+
+  if (!hasPermission) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ textAlign: 'center', margin: 20 }}>
+          Permission d'utilisation de la caméra requise
+        </Text>
+      </View>
+    );
+  }
+
+  if (device == null) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={bdovored} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <RNCamera
+      <Camera
         style={styles.preview}
-        type={RNCamera.Constants.Type.back}
-        flashMode={torchOn ? RNCamera.Constants.FlashMode.torch : RNCamera.Constants.FlashMode.off}
-        onBarCodeRead={onBarCodeRead}
-        barCodeTypes={[RNCamera.Constants.BarCodeType.ean13, RNCamera.Constants.BarCodeType.ean8]}
-        captureAudio={false}
-        androidCameraPermissionOptions={{
-          title: 'Permission d\'utilisation de la caméra',
-          message: 'Nous avons besoin de votre autorisation pour utiliser la caméra',
-          buttonPositive: 'Ok',
-          buttonNegative: 'Annuler',
-        }}>
+        device={device}
+        isActive={true}
+        codeScanner={codeScanner}
+        torch={torchOn ? 'on' : 'off'}
+      >
         <View style={{ position: 'absolute', top: 0, width: '100%', backgroundColor: 'white', flexDirection: 'row', padding: 5 }}>
           <Icon name='FontAwesome5/barcode' size={45} color='black' style={{ marginLeft: 5 }} />
           {loading ? <ActivityIndicator size="small" color={bdovored} style={[CommonStyles.markerIconStyle, { borderWidth: 0 }]} /> : null}
@@ -162,10 +196,11 @@ function BarcodeScanner({ route, navigation }) {
                 </Text>))}
           </Text>
         </View>
-      </RNCamera>
+        
+      </Camera>
       <View style={{ position: "absolute", right: 0, bottom: 5 }}>
         <TouchableOpacity onPress={onAutoAddModePress}>
-          <Icon name={'MaterialIcons/playlist-add'}  size={30} color={autoAddMode ? bdovored : 'black'} style={styles.cameraIcon} />
+          <Icon name={'MaterialIcons/playlist-add'} size={30} color={autoAddMode ? bdovored : 'black'} style={styles.cameraIcon} />
         </TouchableOpacity>
       </View>
       <View style={{ position: "absolute", right: 0, bottom: 65 }}>
@@ -173,6 +208,16 @@ function BarcodeScanner({ route, navigation }) {
           <Icon name={torchOn ? 'Ionicons/flashlight' : 'Ionicons/flashlight-outline'} size={30} color={torchOn ? 'orange' : 'black'} style={styles.cameraIcon} />
         </TouchableOpacity>
       </View>
+      {showPropositionButton && (
+          <View style={{ position: "absolute", left: 0, bottom: 5 }}>
+            <TouchableOpacity
+              onPress={() => openPropositionForm(lastScannedEan)}
+              style={styles.cameraIcon}
+            >
+              <Icon name='MaterialIcons/add-circle' size={30} color={bdovored} />
+            </TouchableOpacity>
+          </View>
+        )}
     </View>
   );
 };

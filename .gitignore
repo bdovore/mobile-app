@@ -80,3 +80,8 @@ package-lock.json
 yarn.lock
 ios/Podfile.lock
 ios/.xcode.env.local
+
+# Expo
+.expo
+dist/
+web-build/
