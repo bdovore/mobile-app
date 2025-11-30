@@ -36,6 +36,7 @@ import { AlbumItem } from '../components/AlbumItem';
 import { bdovored, bdovorlightred, AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
 import { BottomSheet } from '../components/BottomSheet';
 import { Icon } from '../components/Icon';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SerieItem } from '../components/SerieItem';
 import * as APIManager from '../api/APIManager';
 import * as Helpers from '../api/Helpers';
@@ -419,6 +420,11 @@ function CollectionScreen({ route, navigation }) {
                   containerStyle={[CommonStyles.screenStyle]}
                   inputStyle={[CommonStyles.defaultText, { fontSize: 12 }]}
                   cancelButtonTitle='Annuler'
+                  searchIcon={<Ionicons
+                                    name="search"
+                                    size={10}
+                                    color="#888"
+                                  />}
                 />
                 {collectionType == 0 ?
                   <View style={{ flexDirection: 'row', flex: 0, marginTop: 5, marginLeft: 0, marginRight: 5 }}>

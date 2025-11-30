@@ -35,6 +35,7 @@ import { SearchBar } from 'react-native-elements';
 import { AlbumItem } from '../components/AlbumItem';
 import { bdovored, bdovorlightred, AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SerieItem } from '../components/SerieItem';
 import * as APIManager from '../api/APIManager';
 import * as Helpers from '../api/Helpers';
@@ -297,6 +298,11 @@ function ToCompleteScreen({ route, navigation }) {
                 inputContainerStyle={[{ height: 30 }, CommonStyles.searchContainerStyle]}
                 containerStyle={[CommonStyles.screenStyle, { marginVertical: -8 }]}
                 inputStyle={[CommonStyles.defaultText, { fontSize: 12 }]}
+                searchIcon={<Ionicons
+                                                                    name="search"
+                                                                    size={10}
+                                                                    color="#888"
+                                                                  />}
                 cancelButtonTitle='Annuler' />
             }
           />)

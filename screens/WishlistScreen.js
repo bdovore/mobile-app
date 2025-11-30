@@ -34,6 +34,7 @@ import { SearchBar } from 'react-native-elements';
 import { AlbumItem } from '../components/AlbumItem';
 import { AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as Helpers from '../api/Helpers';
 import CollectionManager from '../api/CollectionManager';
 
@@ -162,6 +163,11 @@ function WishlistScreen({ route, navigation }) {
               inputContainerStyle={[{ height: 30 }, CommonStyles.searchContainerStyle]}
               containerStyle={[CommonStyles.screenStyle, { marginVertical: -8 }]}
               inputStyle={[CommonStyles.defaultText, { fontSize: 12 }]}
+              searchIcon={<Ionicons
+                                                  name="search"
+                                                  size={10}
+                                                  color="#888"
+                                                />}
               cancelButtonTitle='Annuler' />
           }
         />
