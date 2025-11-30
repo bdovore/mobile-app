@@ -27,13 +27,13 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, FlatList, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, Text, TouchableOpacity, View, ScrollView } from 'react-native';
 
 import { CommonStyles, bdovorgray } from '../styles/CommonStyles';
 import { CoverImage } from '../components/CoverImage';
 import { Icon } from '../components/Icon';
 import { RatingStars } from '../components/RatingStars';
-import { ScrollView } from 'react-native-gesture-handler';
+// import { ScrollView } from 'react-native-gesture-handler';
 import CollectionManager from '../api/CollectionManager';
 import * as APIManager from '../api/APIManager';
 import * as Helpers from '../api/Helpers';
@@ -143,7 +143,9 @@ function CommentsScreen({ route, navigation }) {
   }
 
   const renderComment = useCallback(({ item, index }) => {
-    return (<ScrollView key={index} style={{ flex: 1, marginTop: 10, marginBottom: 10 }}>
+    return (
+      <View key={index} style={{ width: windowWidth }}>
+    <ScrollView key={index} style={{ flex: 1, marginTop: 10, marginBottom: 10 }}>
       <View>
         {index > 0 ?
           <TouchableOpacity activeOpacity={1} onPress={() => onBrowseToComment(index - 1)} style={{ zIndex: 2, flexDirection: 'row', position: 'absolute', top: navigationPos, left: 0 }} >
@@ -177,7 +179,8 @@ function CommentsScreen({ route, navigation }) {
           <Text style={[CommonStyles.defaultText, { width: windowWidth - 40, marginHorizontal: 20 }]}>{item.COMMENT}</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>);
+    </ScrollView>
+    </View>);
   });
 
   const keyExtractor = useCallback((item, index) =>
