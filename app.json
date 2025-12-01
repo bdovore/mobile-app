@@ -2,7 +2,7 @@
   "name": "bdovore",
   "displayName": "BDovore",
   "platforms": [ "android", "ios", "web" ],
-  "version": "2.2.4",
+  "version": "2.3.0",
   "orientation": "portrait",
   "splash": {
     "image": "./app/assets/bdovore-167.png",

@@ -61,7 +61,7 @@ function AboutPanel({ isVisible, visibleSetter }) {
           flexDirection: 'column', width: '90%', alignItems: 'center', marginVertical: 20,  borderRadius: 10
         }]}>
           <Text style={[CommonStyles.defaultText, CommonStyles.bold, { color: 'black', marginVertical: 10 }]}>{pkg.displayName} - {Platform.OS == 'ios' ? 'iOS' : 'Android'}</Text>
-          <Text style={[CommonStyles.defaultText, { color: 'black' }]}>Version {pkg.version} - Juin 2024</Text>
+          <Text style={[CommonStyles.defaultText, { color: 'black' }]}>Version {pkg.version} - Novembre 2025</Text>
           <Text style={[CommonStyles.defaultText, { color: 'black', marginVertical: 10 }]} onPress={onToggleSponsoredLinks}>Code by Joachim Pouderoux & Thomas Cohu</Text>
         </View>
 

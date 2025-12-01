@@ -1,15 +1,20 @@
 #!/bin/bash
 
+ANDROID_STUDIO_HOME=/opt/android-studio-2025.2.1/android-studio
 export ANDROID_SDK_ROOT=/home/joachim/Android/Sdk
+
 export NODE_OPTIONS=--openssl-legacy-provider
+export JDK_HOME=$ANDROID_STUDIO_HOME/jbr/
+export JAVA_HOME=$ANDROID_STUDIO_HOME/jbr/
+export PATH=$ANDROID_STUDIO_HOME/jbr/bin:$PATH
 
-APP_VERSION=2.2.4
+APP_VERSION=2.3.0
 
-#./gradlew assembleDebug
-#cp app/build/outputs/apk/debug/app-debug.apk bdovore-$APP_VERSION-debug.apk
+./gradlew assembleDebug
+cp app/build/outputs/apk/debug/app-debug.apk bdovore-$APP_VERSION-debug.apk
 
-./gradlew assembleRelease
-cp app/build/outputs/apk/release/app-release.apk bdovore-$APP_VERSION-release.apk
+#./gradlew assembleRelease
+#cp app/build/outputs/apk/release/app-release.apk bdovore-$APP_VERSION-release.apk
 
 #./gradlew bundleRelease
 #cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-release.aab

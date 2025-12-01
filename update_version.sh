@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # This script updates the version number accross the different files of the project
 
