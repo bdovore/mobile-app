@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -671,8 +671,7 @@ const RootStack = createStackNavigator();
 
 function MainTab() {
   return (
-    <RootStack.Navigator
-      screenOptions={{ presentation: "modal", headerShown: false }}>
+    <RootStack.Navigator mode="modal" headerMode="none" >
       <RootStack.Screen name="CoreTab" component={CoreTab} />
       <RootStack.Screen name="Login" component={LoginScreen} />
       <RootStack.Screen name="Image" component={ImageScreen} />
