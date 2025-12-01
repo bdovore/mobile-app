@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -39,7 +39,7 @@ import * as Helpers from '../api/Helpers';
 
 import { LoadingIndicator } from '../components/LoadingIndicator';
 import {
- 
+
   BarChart
 } from 'react-native-gifted-charts'
 
@@ -95,7 +95,7 @@ function CollectionStatScreen ({ route, navigation }) {
     }
   }
 
- 
+
   const renderData = useCallback (({ item, index }) => (
     <Text key={index}>{item.libelle} : {item.nbtome}</Text>
   ));
@@ -129,17 +129,17 @@ function CollectionStatScreen ({ route, navigation }) {
   const tooltip = (label, index, data) => {
      // Définis le décalage par défaut
      let marginLeftAdjustment = -6;
-                  
+
      // Disons que tu as 10 barres, et tu veux ajuster pour les 3 dernières
      const totalBars = 8;
      const adjustForLastBars = 3; // Les dernières barres pour lesquelles ajuster
      const threshold = totalBars - adjustForLastBars;
-   
+
      // Si l'index de la barre courante est dans les 3 dernières, ajuste le marginLeft
      if (index >= threshold) {
        marginLeftAdjustment = -80; // Ajuste cette valeur selon le besoin pour éviter le débordement
      }
-   
+
      return (
        <View
          style={{
@@ -179,7 +179,7 @@ function CollectionStatScreen ({ route, navigation }) {
                   barBorderRadius={4}
                   frontColor="lightgray"
                   data={dataGenre.map ( item => (
-                    { label : item.libelle[0], 
+                    { label : item.libelle[0],
                       value : item.nbtome,
                       labelTextStyle: {color: 'gray'}
                     }
@@ -195,12 +195,12 @@ function CollectionStatScreen ({ route, navigation }) {
                   renderTooltip={(item, index) => {
                     return tooltip(dataGenre[index].libelle, index, dataGenre)
                   }}
-                  
+
                     />
               </CollapsableSection>
             </ScrollView>
          </View>
-         
+
        )}
        {(!dataAuteur ?
           <LoadingIndicator /> :
@@ -213,7 +213,7 @@ function CollectionStatScreen ({ route, navigation }) {
                   barBorderRadius={4}
                   frontColor="lightgray"
                   data={dataAuteur.map ( item => (
-                    { label : item.pseudo[0], value : item.score, labelTextStyle: {color: 'gray'}} 
+                    { label : item.pseudo[0], value : item.score, labelTextStyle: {color: 'gray'}}
                     )
                   )}
                   maxValue = {Math.max( ...dataAuteur.map( item => item.score))}
@@ -226,12 +226,12 @@ function CollectionStatScreen ({ route, navigation }) {
                   renderTooltip={(item, index) => {
                     return tooltip(dataAuteur[index].pseudo, index, dataAuteur)
                   }}
-                  
+
                     />
               </CollapsableSection>
             </ScrollView>
          </View>
-         
+
        )}
        {(!dataEditeur ?
           <LoadingIndicator /> :
@@ -244,7 +244,7 @@ function CollectionStatScreen ({ route, navigation }) {
                   barBorderRadius={4}
                   frontColor="lightgray"
                   data={dataEditeur.map ( item => (
-                    { label : item.nom[0], value : item.nbtome , labelTextStyle: {color: 'gray'}} 
+                    { label : item.nom[0], value : item.nbtome , labelTextStyle: {color: 'gray'}}
                     )
                   )}
                   maxValue = {Math.max( ...dataEditeur.map( item => item.nbtome))}
@@ -257,12 +257,12 @@ function CollectionStatScreen ({ route, navigation }) {
                   renderTooltip={(item, index) => {
                     return tooltip(dataEditeur[index].nom, index, dataEditeur)
                   }}
-                  
+
                     />
               </CollapsableSection>
             </ScrollView>
          </View>
-         
+
        )}
         {(!dataNote ?
           <LoadingIndicator /> :
@@ -275,7 +275,7 @@ function CollectionStatScreen ({ route, navigation }) {
                   barBorderRadius={4}
                   frontColor="lightgray"
                   data={dataNote.map ( item => (
-                    { label : item.note, value : item.nbnotes, labelTextStyle: {color: 'gray'}} 
+                    { label : item.note, value : item.nbnotes, labelTextStyle: {color: 'gray'}}
                     )
                   )}
                   maxValue = {Math.max( ...dataNote.map( item => item.nbnotes))}
@@ -285,23 +285,23 @@ function CollectionStatScreen ({ route, navigation }) {
                   yAxisThickness={0}
                   yAxisTextStyle={{color: 'gray'}}
                   xAxisThickness={0}
-                  scrollToEnd= {true} 
+                  scrollToEnd= {true}
                   renderTooltip={(item, index) => {
                     return tooltip(dataNote[index].note, index, dataNote)
                   }}
-                  
+
                     />
               </CollapsableSection>
             </ScrollView>
          </View>
-         
+
        )}
 
        </ScrollView>
-       
+
     }
     </View>
   )
 }
- 
+
 export default CollectionStatScreen;

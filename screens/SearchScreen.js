@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -202,7 +202,7 @@ function SearchScreen({ navigation }) {
                     name="close-circle"  // ou "close" pour une croix simple
                     size={20}
                     color="#888"
-                    onPress={onSearchCancel} 
+                    onPress={onSearchCancel}
                   /> : null
                 }
               onChangeText={onSearch}
@@ -263,21 +263,21 @@ function SearchScreen({ navigation }) {
             extraData={toggleElement}
           />
         )}
-    
+
         {/* Bouton "Proposer un ajout" */}
         {keywords && !loading ? (
-          <View style={{ 
-            padding: 15, 
+          <View style={{
+            padding: 15,
             backgroundColor: CommonStyles.screenStyle.backgroundColor,
             borderTopWidth: 1,
             borderTopColor: '#ccc'
           }}>
-            <Text 
-              onPress={onAddProposition} 
+            <Text
+              onPress={onAddProposition}
               style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>
                 Rien trouvé ? Proposer un ajout
               </Text>
-            
+
           </View>
         ) : null}
       </View>:

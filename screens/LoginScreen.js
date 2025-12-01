@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -194,37 +194,38 @@ function LoginScreen({ navigation }) {
   }
 
   const onDisconnetPress = () => {
-    
+
     global.forceOffline = false;
     global.isConnected = false;
-    
+
     console.debug('Deconnexion user.');
     Helpers.showToast(false, 'Vous êtes déconnecté', 'Veuillez vous connecter de nouveau.')
     Helpers.setAndSaveGlobal('token', null);
     Helpers.setAndSaveGlobal('login', null);
     Helpers.setAndSaveGlobal('passwd', null);
-    
+
     setPseudo(global.login);
     setPasswd(global.passwd);
     setIsConnected(false);
   }
 
   return (
-    <View style={CommonStyles.screenStyle}>
+    <View style={[CommonStyles.screenStyle]}>
       <ScrollView>
-        <View style={{ marginTop: 20, alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.0)' }}>
-          <Image source={require('../assets/logo_v2.png')} resizeMode='cover' style={{ height: 160, width:320 }}/>
+        <View style={{ marginTop: 20, alignItems: 'center', marginBottom: 100, backgroundColor: 'rgba(0, 0, 0, 0.0)' }}>
+          <Image source={require('../assets/bdo_fond.jpg')} resizeMode='cover' style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.6 }} />
+          <Image source={require('../assets/logo_v2.png')} resizeMode='cover' style={{ top: 80, height: 160, width:320,  }}/>
         </View>
-        {isConnected ? 
+        {isConnected ?
         <View>
           <View style={{height: 20}}></View>
           <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Vous êtes connecté en tant que {global.login}</Text>
           <Text onPress={onDisconnetPress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Se déconnecter</Text>
           <View>
-            
+
 
             <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Vous pouvez mettre à jour vos préférences ou supprimer votre compte Bdovore en vous connectant sur Bdovore.com</Text>
-           
+
             <TouchableOpacity
               style={CommonStyles.loginConnectionButtonStyle}
               onPress={onEditAccount}
@@ -241,10 +242,10 @@ function LoginScreen({ navigation }) {
               title='Fermer'>
               <Text style={CommonStyles.loginConnectionTextStyle}>Fermer</Text>
             </TouchableOpacity>
-            
+
           </View>
         </View>
-          
+
         : (
         <><Text style={[CommonStyles.defaultText, { marginTop: 0, marginBottom: 15, textAlign: 'center' }]}>Connectez vous avec votre compte BDovore</Text><Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Login</Text><TextInput
               style={[CommonStyles.SectionStyle, CommonStyles.loginInputTextStyle]}
@@ -272,13 +273,13 @@ function LoginScreen({ navigation }) {
                 onSubmitEditing={onLoginPress}
                 blurOnSubmit={false}
                 testID='password' />
-      
+
         {errortext ? (
           <Text style={CommonStyles.errorTextStyle}>
             {errortext}
           </Text>
         ) : null}
-      
+
         {loading ?
           <SmallLoadingIndicator style={{
             flexDirection: 'row',
@@ -295,14 +296,14 @@ function LoginScreen({ navigation }) {
             </View>
         }
         <View>
-            
+
             <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Vous n'avez pas encore de compte ?</Text>
-            <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Rendez-vous sur bdovore.com pour en créer un gratuitement.</Text>
+            <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Rendez-vous sur <Text style={CommonStyles.linkText} onPress={() => Linking.openURL('https://bdovore.com')}>bdovore.com</Text> pour en créer un gratuitement.</Text>
             <Text style={[CommonStyles.linkText, { marginTop: 10, textAlign: 'center' }]} onPress={onRegister}>Créer mon compte</Text>
-         
+
           </View>
         </>)}
-       
+
         <View style={{height: 20}}></View>
       </ScrollView>
     </View>

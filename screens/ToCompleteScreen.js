@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -71,12 +71,10 @@ function ToCompleteScreen({ route, navigation }) {
       series = [];
     }
 
-    //console.log('refreshing ????? local ' + cachedToken + '/' + global.localTimestamp + ' to server ' + global.token + '/' + global.serverTimestamp);
     if ((global.autoSync || force) && cachedToken != 'fetching' && !global.forceOffline && (cachedToken != global.token || !global.collectionManquantsUpdated)) {
       const savedCachedToken = cachedToken;
       cachedToken = 'fetching';
       APIManager.onConnected(navigation, () => {
-        //console.log('refreshing from local ' + savedCachedToken + '/' + global.localTimestamp + ' to server ' + global.token + '/' + global.serverTimestamp);
         fetchData();
       }, () => { cachedToken = savedCachedToken; });
     }

@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -248,9 +248,9 @@ class CCollectionManager {
     } else {
       // else return empty array
       return [];
-    } 
+    }
 
-    
+
   }
 
   getAlbumsInSerie(id_serie) {
@@ -263,7 +263,7 @@ class CCollectionManager {
     } else {
       return [];
     }
-    
+
   }
 
   getWishes(origine = 0) {
@@ -272,7 +272,7 @@ class CCollectionManager {
     } else {
       return [];
     }
-    
+
   }
 
   numberOfSeries(origine = 0) {

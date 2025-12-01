@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -438,7 +438,7 @@ export async function fetchCollectionStat(by, context, callback) {
   fetchZIP(url)
     .then(response => response.json())
     .then(json => {
-      console.log(json);
+      //console.log(json);
       callback({ error: '', items: json });
     })
     .catch((error) => {
@@ -556,7 +556,7 @@ export async function updateCollection(func, callback, params = {}) {
       if (response.error == '') {
         //console.log(response);
         global.serverTimestamp = response.timestamp;
-        console.log('New server timestamp: ' + response.timestamp);
+        //console.log('New server timestamp: ' + response.timestamp);
         Helpers.saveTimestamp();
       }
       callback({ error: response.error });
@@ -669,7 +669,7 @@ export function getAuteurCoverURL(item) {
 export async function addProposition(keywords) {
   if (global.isConnected) {
     // navigation.push('PropositionWebView', { keyword: keywords });
-    try { 
+    try {
       let url = bdovoreBaseURL + '/proposition?';
       url = concatParamsToURL(url, { 'API_TOKEN': global.token , keyword: keywords } );
       if (await InAppBrowser.isAvailable()) {

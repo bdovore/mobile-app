@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -299,7 +299,7 @@ function AlbumScreen({ route, navigation }) {
   }
 
   const onSubmitChanges = () => {
-    console.log("Demande de modification");
+    console.debug("Demande de modification");
     if (global.isConnected) {
       let url = APIManager.bdovoreBaseURL + '/Proposition?id_edition=' + album.ID_EDITION;
       url = APIManager.concatParamsToURL(url, { 'API_TOKEN': global.token });

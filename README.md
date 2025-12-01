@@ -2,7 +2,7 @@
 
 ![BDovore](assets/logo_v2.png)
 
-Coded by Joachim Pouderoux and Thomas Cohu, 2021-2024.
+Coded by Joachim Pouderoux and Thomas Cohu, 2021-2025.
 
 License: BSD-3-Clause License.
 

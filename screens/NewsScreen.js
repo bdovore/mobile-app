@@ -1,4 +1,4 @@
-/* Copyright 2021-2022 Joachim Pouderoux & Association BDovore
+/* Copyright 2021-2025 Joachim Pouderoux, Thomas Cohu & Association BDovore
  *
  * Redistribution and use in source and binary forms, with or without modification,
  * are permitted provided that the following conditions are met:
@@ -85,7 +85,6 @@ function NewsScreen({ route, navigation }) {
     //setFilteredForthcomingAlbums(
     // Helpers.stripNewsByOrigin(forthcomingAlbums.slice(), newsModeMap[collectionGenre]));
 
-    //console.log("collection genre changed");
     // Fetch the tendency news for current collection genre
     fetchNewsData();
   }, [collectionGenre]);
@@ -95,12 +94,10 @@ function NewsScreen({ route, navigation }) {
   }
 
   const refreshDataIfNeeded = () => {
-    //console.log('refreshing ????? local ' + cachedToken + '/' + global.localTimestamp + ' to server ' + global.token + '/' + global.serverTimestamp);
     if (cachedToken != 'fetching' && !global.forceOffline && (cachedToken != global.token)) {
       const savedCachedToken = cachedToken;
       cachedToken = 'fetching';
       APIManager.onConnected(navigation, () => {
-        //console.log('refreshing from local ' + savedCachedToken + '/' + global.localTimestamp + ' to server ' + global.token + '/' + global.serverTimestamp);
         fetchUserNewsData();
       }, () => { cachedToken = savedCachedToken; });
     }
