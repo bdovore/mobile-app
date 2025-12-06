@@ -35,6 +35,7 @@ import { CommonStyles, bdovored } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
 import * as APIManager from '../api/APIManager';
 import * as Helpers from '../api/Helpers';
+import Toast from 'react-native-toast-message';
 
 let eanFound = false;
 
@@ -90,7 +91,8 @@ function BarcodeScanner({ route, navigation }) {
         } else {
           Helpers.showToast(true,
             "Aucun album trouvé avec ce code",
-            "Essayez la recherche textuelle avec le nom de la série ou de l'album");
+            "Essayez la recherche textuelle avec le nom de la série ou de l'album",
+            5000);
           setShowPropositionButton(true);
           setLastScannedEan(ean);
         }
@@ -128,7 +130,8 @@ function BarcodeScanner({ route, navigation }) {
               } else {
                 Helpers.showToast(true,
                   "Aucun album trouvé",
-                  "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.");
+                  "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.",
+                  5000);
                 setShowPropositionButton(true);
                 setLastScannedEan(ean);
               }
@@ -198,6 +201,7 @@ function BarcodeScanner({ route, navigation }) {
         </View>
 
       </Camera>
+      <Toast />
       <View style={{ position: "absolute", right: 0, bottom: 5 }}>
         <TouchableOpacity onPress={onAutoAddModePress}>
           <Icon name={'MaterialIcons/playlist-add'} size={30} color={autoAddMode ? bdovored : 'black'} style={styles.cameraIcon} />
