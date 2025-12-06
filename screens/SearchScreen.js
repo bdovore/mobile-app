@@ -275,7 +275,7 @@ function SearchScreen({ navigation }) {
             <Text
               onPress={onAddProposition}
               style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>
-                Rien trouvé ? Proposer un ajout
+                Rien trouvé ? Vous pouvez proposer un ajout
               </Text>
 
           </View>
