@@ -29,6 +29,7 @@
 
 import React from 'react';
 import { Image, Text, View } from 'react-native';
+import Toast from 'react-native-toast-message';
 
 import { BottomSheet } from '../components/BottomSheet';
 import { CommonStyles } from '../styles/CommonStyles';
@@ -66,6 +67,7 @@ function AboutPanel({ isVisible, visibleSetter }) {
         </View>
 
         <Text style={[CommonStyles.linkText, CommonStyles.center, { marginTop: 20 }]} onPress={() => visibleSetter(false)}>Fermer</Text>
+        <Toast />
       </View>
     </BottomSheet>
   );

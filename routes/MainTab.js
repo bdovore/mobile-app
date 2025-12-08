@@ -671,7 +671,7 @@ const RootStack = createStackNavigator();
 
 function MainTab() {
   return (
-    <RootStack.Navigator mode="modal" headerMode="none" >
+    <RootStack.Navigator screenOptions={{ presentation: "modal", headerShown: false }} >
       <RootStack.Screen name="CoreTab" component={CoreTab} />
       <RootStack.Screen name="Login" component={LoginScreen} />
       <RootStack.Screen name="Image" component={ImageScreen} />
