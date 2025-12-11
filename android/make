@@ -1,22 +1,25 @@
 #!/bin/bash
 
-ANDROID_STUDIO_HOME=/opt/android-studio-2025.2.1/android-studio
-export ANDROID_SDK_ROOT=/home/joachim/Android/Sdk
+ANDROID_STUDIO_HOME=/opt/android-studio-2025.2.2/android-studio
+export ANDROID_SDK_ROOT=~/Android/Sdk
 
 export NODE_OPTIONS=--openssl-legacy-provider
 export JDK_HOME=$ANDROID_STUDIO_HOME/jbr/
 export JAVA_HOME=$ANDROID_STUDIO_HOME/jbr/
 export PATH=$ANDROID_STUDIO_HOME/jbr/bin:$PATH
 
-APP_VERSION=2.3.0
+VERSION_CODE=$(grep versionCode ./app/build.gradle | head -n 1 | sed 's/        versionCode \([0-9]*\)/\1/g')
+APP_VERSION=$(grep versionName ./app/build.gradle | head -n 1 | sed 's/        versionName \"\([0-9\.]*\)\"/\1/g')
 
-./gradlew assembleDebug
-cp app/build/outputs/apk/debug/app-debug.apk bdovore-$APP_VERSION-debug.apk
+echo "Building bdovore version $APP_VERSION (code $VERSION_CODE)"
 
-#./gradlew assembleRelease
-#cp app/build/outputs/apk/release/app-release.apk bdovore-$APP_VERSION-release.apk
+./gradlew $1 assembleDebug
+cp app/build/outputs/apk/debug/app-debug.apk bdovore-$APP_VERSION-$VERSION_CODE-debug.apk
 
-./gradlew bundleRelease
-cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-release.aab
+./gradlew $1 assembleRelease
+cp app/build/outputs/apk/release/app-release.apk bdovore-$APP_VERSION-$VERSION_CODE-release.apk
+
+./gradlew $1 bundleRelease
+cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-$VERSION_CODE-release.aab
 
 echo "App copied into current directory."

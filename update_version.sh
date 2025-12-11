@@ -26,13 +26,6 @@ sed -i "s/        versionName \"[0-9\.]*\"/        versionName \"$version\"/g" a
 sed -i "s/CURRENT_PROJECT_VERSION = [0-9]*/CURRENT_PROJECT_VERSION = $projectVersion/g" ios/bdovore.xcodeproj/project.pbxproj
 sed -i "s/MARKETING_VERSION = [0-9\.]*/MARKETING_VERSION = $version/g" ios/bdovore.xcodeproj/project.pbxproj
 
-
-sed -i "s/APP_VERSION=[0-9\.]*/APP_VERSION=$version/g" android/make.bat
-sed -i "s/APP_VERSION=[0-9\.]*/APP_VERSION=$version/g" android/make
-
-sed -i "s/bdovore-v[0-9\.]*-/bdovore-v$version-/g" android/make.bat
-sed -i "s/bdovore-v[0-9\.]*-/bdovore-v$version-/g" android/make
-
 echo New version: $version
 echo New Android versionCode: $versionCode
 echo New iOS projectVersion: $projectVersion
