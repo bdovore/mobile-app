@@ -29,7 +29,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
-
+import { useIsFocused } from '@react-navigation/native';
+import { useRef, useState } from 'react';
 import CollectionManager from '../api/CollectionManager';
 import { CommonStyles, bdovored } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
@@ -37,11 +38,13 @@ import * as APIManager from '../api/APIManager';
 import * as Helpers from '../api/Helpers';
 import Toast from 'react-native-toast-message';
 
-let eanFound = false;
+//let eanFound = false;
 
 function BarcodeScanner({ route, navigation }) {
   const [autoAddMode, setAutoAddMode] = useState(false);
   const [lastEan, setLastEan] = useState('');
+  const isFocused = useIsFocused();
+  const isScanning = useRef(false); // No
   const [loading, setLoading] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [nbAddedAlbums, setNbAddedAlbums] = useState(0);
@@ -96,53 +99,103 @@ function BarcodeScanner({ route, navigation }) {
           setShowPropositionButton(true);
           setLastScannedEan(ean);
         }
-        eanFound = false;
+        
         setLoading(false);
       }, params);
-    } else {
-      eanFound = false;
-    }
+    } 
   }
+
+  // const codeScanner = useCodeScanner({
+  //   codeTypes: ['ean-13', 'ean-8'],
+  //   onCodeScanned: (codes) => {
+  //     if (codes.length > 0 && !eanFound) {
+  //       const ean = codes[0].value;
+  //       if (!eanFound && ean) {
+  //         eanFound = true;
+  //         if (autoAddMode) {
+  //           if (global.isConnected) {
+  //             searchAndAddAlbumWithEAN(ean);
+  //           } else {
+  //             Helpers.showToast(true,
+  //               "Connexion internet désactivée",
+  //               "Rechercher de l'album impossible");
+  //             eanFound = false;
+  //           }
+  //         } else {
+  //           setLoading(true);
+  //           let params = (ean.length > 10) ? { EAN: ean } : { ISBN: ean };
+  //           APIManager.fetchAlbum((result) => {
+  //             if (result.error == '' && result.items.length > 0) {
+  //               navigation.goBack();
+  //               navigation.push('Album', { item: result.items[0] })
+  //             } else {
+  //               Helpers.showToast(true,
+  //                 "Aucun album trouvé",
+  //                 "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.",
+  //                 5000);
+  //               setShowPropositionButton(true);
+  //               setLastScannedEan(ean);
+  //             }
+  //             eanFound = false;
+  //             setLoading(false);
+  //           }, params);
+  //         }
+  //       }
+  //     }
+  //   }
+  // });
 
   const codeScanner = useCodeScanner({
     codeTypes: ['ean-13', 'ean-8'],
     onCodeScanned: (codes) => {
-      if (codes.length > 0 && !eanFound) {
+      // 1. On vérifie qu'on n'est pas déjà en train de scanner ET que l'écran est affiché
+      if (codes.length > 0 && !isScanning.current && isFocused) {
         const ean = codes[0].value;
-        if (!eanFound && ean) {
-          eanFound = true;
-          if (autoAddMode) {
-            if (global.isConnected) {
-              searchAndAddAlbumWithEAN(ean);
-            } else {
-              Helpers.showToast(true,
-                "Connexion internet désactivée",
-                "Rechercher de l'album impossible");
-              eanFound = false;
-            }
-          } else {
-            setLoading(true);
-            let params = (ean.length > 10) ? { EAN: ean } : { ISBN: ean };
-            APIManager.fetchAlbum((result) => {
-              if (result.error == '' && result.items.length > 0) {
-                navigation.goBack();
-                navigation.push('Album', { item: result.items[0] })
-              } else {
-                Helpers.showToast(true,
-                  "Aucun album trouvé",
-                  "Aucun album trouvé avec ce code. Essayez la recherche textuelle avec le nom de la série ou de l'album.",
-                  5000);
-                setShowPropositionButton(true);
-                setLastScannedEan(ean);
-              }
-              eanFound = false;
-              setLoading(false);
-            }, params);
-          }
+        if (!ean) return;
+
+        // 2. On verrouille immédiatement
+        isScanning.current = true;
+
+        if (autoAddMode) {
+          handleAutoAdd(ean);
+        } else {
+          handleManualSearch(ean);
         }
       }
     }
   });
+
+  const handleAutoAdd = (ean) => {
+    if (global.isConnected) {
+      searchAndAddAlbumWithEAN(ean);
+    } else {
+      Helpers.showToast(true,
+        "Connexion internet désactivée",
+        "Rechercher de l'album impossible");
+      eanFound = false;
+    }
+  }
+  const handleManualSearch = (ean) => {
+    setLoading(true);
+    let params = (ean.length > 10) ? { EAN: ean } : { ISBN: ean };
+
+    APIManager.fetchAlbum((result) => {
+      setLoading(false);
+      if (result.error == '' && result.items.length > 0) {
+        // On part sur un autre écran : la ref sera détruite, c'est propre.
+        navigation.goBack();
+        navigation.push('Album', { item: result.items[0] });
+      } else {
+        Helpers.showToast(true, "Aucun album trouvé", "...");
+        
+        // 3. IMPORTANT : En cas d'échec, on déverrouille après 2 sec 
+        // pour laisser l'utilisateur scanner un autre code.
+        setTimeout(() => {
+          isScanning.current = false;
+        }, 2000);
+      }
+    }, params);
+  };
 
   const onTorchPress = () => {
     setTorchOn(!torchOn);
@@ -179,7 +232,7 @@ function BarcodeScanner({ route, navigation }) {
       <Camera
         style={styles.preview}
         device={device}
-        isActive={true}
+        isActive={isFocused}
         codeScanner={codeScanner}
         torch={torchOn ? 'on' : 'off'}
       >

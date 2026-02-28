@@ -31,5 +31,17 @@ target 'bdovore' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        # 1. On autorise les inclusions non-modulaires (ton erreur actuelle)
+        config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+        
+        # 2. On aligne la version cible (Realm a souvent besoin de 12 ou 13+)
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.1'
+        
+        # 3. Correctif spécifique pour les erreurs de headers Swift/C++
+        config.build_settings['SWIFT_INSTALL_OBJC_HEADER'] = 'YES'
+      end
+    end
   end
 end
