@@ -140,6 +140,11 @@ export async function reloginBDovore(navigation, callback = null) {
           } else if (callback) {
             try {
               callback();
+               if (navigation && navigation.canGoBack()) {  // si on a un navigator
+                  navigation.goBack();
+                } else if (navigation) {
+                  navigation.navigate('CoreTab');  // Solution de repli
+                }
             } catch (error) {
               console.debug(error);
             }

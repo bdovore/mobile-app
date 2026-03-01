@@ -102,8 +102,8 @@ android {
         applicationId "com.mobileapp.bdovore"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2126
-        versionName "2.3.1"
+        versionCode 2127
+        versionName "2.3.2"
         missingDimensionStrategy 'react-native-camera', 'mlkit'
 
         // This block is different from the one you use to link Gradle

@@ -291,9 +291,15 @@ function NewsScreen({ route, navigation }) {
                 inputStyle={[CommonStyles.defaultText, { fontSize: 12 }]}
                 searchIcon={<Ionicons
                                                     name="search"
-                                                    size={10}
+                                                    size={20}
                                                     color="#888"
                                                   />}
+                clearIcon={keywords ? (
+                        <TouchableOpacity onPress={() => setKeywords('')}>
+                          <Ionicons name="close-circle" size={20} color="#888" />
+                        </TouchableOpacity>
+                      ) : null}
+
                 cancelButtonTitle='Annuler' />
             } />
           :

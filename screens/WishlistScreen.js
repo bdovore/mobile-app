@@ -27,7 +27,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Switch, Text, View } from 'react-native';
+import { FlatList, Switch, Text, View, TouchableOpacity} from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { SearchBar } from 'react-native-elements';
 
@@ -164,10 +164,15 @@ function WishlistScreen({ route, navigation }) {
               containerStyle={[CommonStyles.screenStyle, { marginVertical: -8 }]}
               inputStyle={[CommonStyles.defaultText, { fontSize: 12 }]}
               searchIcon={<Ionicons
-                                                  name="search"
-                                                  size={10}
-                                                  color="#888"
-                                                />}
+                              name="search"
+                              size={20}
+                              color="#888"
+                            />}
+              clearIcon={keywords ? (
+                        <TouchableOpacity onPress={() => setKeywords('')}>
+                          <Ionicons name="close-circle" size={20} color="#888" />
+                        </TouchableOpacity>
+                      ) : null}
               cancelButtonTitle='Annuler' />
           }
         />

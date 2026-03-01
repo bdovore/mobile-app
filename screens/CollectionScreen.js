@@ -421,9 +421,14 @@ function CollectionScreen({ route, navigation }) {
                   cancelButtonTitle='Annuler'
                   searchIcon={<Ionicons
                                     name="search"
-                                    size={10}
+                                    size={20}
                                     color="#888"
                                   />}
+                   clearIcon={keywords ? (
+                      <TouchableOpacity onPress={() => setKeywords('')}>
+                        <Ionicons name="close-circle" size={20} color="#888" />
+                      </TouchableOpacity>
+                    ) : null}
                 />
                 {collectionType == 0 ?
                   <View style={{ flexDirection: 'row', flex: 0, marginTop: 5, marginLeft: 0, marginRight: 5 }}>

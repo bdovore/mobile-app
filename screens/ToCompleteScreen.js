@@ -297,10 +297,15 @@ function ToCompleteScreen({ route, navigation }) {
                 containerStyle={[CommonStyles.screenStyle, { marginVertical: -8 }]}
                 inputStyle={[CommonStyles.defaultText, { fontSize: 12 }]}
                 searchIcon={<Ionicons
-                                                                    name="search"
-                                                                    size={10}
-                                                                    color="#888"
-                                                                  />}
+                                  name="search"
+                                  size={20}
+                                  color="#888"
+                                />}
+                clearIcon={keywords ? (
+                            <TouchableOpacity onPress={() => setKeywords('')}>
+                              <Ionicons name="close-circle" size={20} color="#888" />
+                            </TouchableOpacity>
+                          ) : null}
                 cancelButtonTitle='Annuler' />
             }
           />)
