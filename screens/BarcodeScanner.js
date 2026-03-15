@@ -26,8 +26,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, { useEffect, useState, useRef } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { ActivityIndicator, AppState, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { useIsFocused } from '@react-navigation/native';
 import CollectionManager from '../api/CollectionManager';
@@ -38,9 +38,8 @@ import * as Helpers from '../api/Helpers';
 import Toast from 'react-native-toast-message';
 import ReactNativeHapticFeedback from "react-native-haptic-feedback";
 
-//let eanFound = false;
 const options = {
-  enableVibrateFallback: true, // Pour les vieux Android qui n'ont pas le moteur haptique précis
+  enableVibrateFallback: true,
   ignoreAndroidSystemSettings: false,
 };
 
@@ -48,7 +47,7 @@ function BarcodeScanner({ route, navigation }) {
   const [autoAddMode, setAutoAddMode] = useState(false);
   const [lastEan, setLastEan] = useState('');
   const isFocused = useIsFocused();
-  const isScanning = useRef(false); // No
+  const isScanning = useRef(false);
   const [loading, setLoading] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
   const [nbAddedAlbums, setNbAddedAlbums] = useState(0);
@@ -56,21 +55,81 @@ function BarcodeScanner({ route, navigation }) {
   const [lastScannedEan, setLastScannedEan] = useState('');
   const [lastAddedAlbum, setLastAddedAlbum] = useState('');
   const [hasPermission, setHasPermission] = useState(false);
+  
+
+  // FIX 1 - Écran noir : délai d'activation + état "caméra prête"
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
 
   const device = useCameraDevice('back');
 
+  // ──────────────────────────────────────────────
+  // FIX 2 - Permission : re-check à chaque focus
+  // Remplace l'ancien useEffect([], []) qui ne checkait qu'au mount.
+  // Sur Android 16 (Pixel 6+), les one-time permissions sont révoquées
+  // silencieusement quand l'app perd le foreground. Il faut donc
+  // re-vérifier à chaque retour sur cet écran.
+  // ──────────────────────────────────────────────
   useEffect(() => {
-    const willFocusSubscription = navigation.addListener('focus', () => {
+  if (!isFocused) return;
+
+  const checkPermission = async () => {
+    let status = Camera.getCameraPermissionStatus();
+
+    if (status === 'granted') {
+      setHasPermission(true);
+      return;
+    }
+
+    // Si pas granted, on tente une demande.
+    // Le système Android décide s'il affiche le dialogue ou non :
+    // - not-determined → dialogue
+    // - denied après one-time expiré → dialogue
+    // - denied définitif ("ne plus demander") → pas de dialogue, retourne denied
+    status = await Camera.requestCameraPermission();
+    setHasPermission(status === 'granted');
+  };
+
+  checkPermission();
+}, [isFocused]);
+
+  // ──────────────────────────────────────────────
+  // FIX 2 bis - Re-check permission au retour foreground
+  // Couvre le cas lock/unlock et switch app sur Android 16.
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active' && isFocused) {
+        const status = Camera.getCameraPermissionStatus();
+        setHasPermission(status === 'granted');
+      }
+    });
+    return () => subscription.remove();
+  }, [isFocused]);
+
+  // ──────────────────────────────────────────────
+  // FIX 1 - Activation caméra avec délai
+  // Sur certains Android (LineageOS, Pixel récents), le HAL caméra
+  // met 100-400ms à s'initialiser. Sans ce délai, le composant
+  // Camera est monté mais le flux vidéo n'est pas encore prêt
+  // → écran noir.
+  // ──────────────────────────────────────────────
+  useEffect(() => {
+    if (isFocused && hasPermission) {
+      const timer = setTimeout(() => setCameraActive(true), 200);
+      return () => clearTimeout(timer);
+    } else {
+      setCameraActive(false);
+      setCameraReady(false);
+    }
+  }, [isFocused, hasPermission]);
+
+  // Reset du verrou de scan au focus
+  useEffect(() => {
+    const sub = navigation.addListener('focus', () => {
       isScanning.current = false;
     });
-    return willFocusSubscription;
-  }, []);
-
-  useEffect(() => {
-    (async () => {
-      const cameraPermission = await Camera.requestCameraPermission();
-      setHasPermission(cameraPermission === 'granted');
-    })();
+    return sub;
   }, []);
 
   const searchAndAddAlbumWithEAN = (ean) => {
@@ -104,31 +163,26 @@ function BarcodeScanner({ route, navigation }) {
           "Aucun album trouvé avec ce code",
           "Essayez la recherche textuelle avec le nom de la série ou de l'album",
           5000);
-          ReactNativeHapticFeedback.trigger("notificationError", options);
+        ReactNativeHapticFeedback.trigger("notificationError", options);
         setShowPropositionButton(true);
         setLastScannedEan(ean);
       }
       setTimeout(() => {
-          isScanning.current = false;
+        isScanning.current = false;
       }, 2000);
 
       setLoading(false);
     }, params);
-  
   }
 
   const codeScanner = useCodeScanner({
     codeTypes: ['ean-13', 'ean-8'],
     onCodeScanned: (codes) => {
-      
-      // 1. On vérifie qu'on n'est pas déjà en train de scanner ET que l'écran est affiché
-      if (codes.length > 0 && !isScanning.current ) {
+      if (codes.length > 0 && !isScanning.current) {
         const ean = codes[0].value;
         if (!ean) return;
 
-        // retour haptique
         ReactNativeHapticFeedback.trigger("impactLight", options);
-        // 2. On verrouille immédiatement
         isScanning.current = true;
 
         if (autoAddMode) {
@@ -143,16 +197,14 @@ function BarcodeScanner({ route, navigation }) {
   const handleAutoAdd = (ean) => {
     if (global.isConnected) {
       searchAndAddAlbumWithEAN(ean);
-      
     } else {
       Helpers.showToast(true,
         "Connexion internet désactivée",
         "Rechercher de l'album impossible");
-      
-        isScanning.current = false;
-        
+      isScanning.current = false;
     }
   }
+
   const handleManualSearch = (ean) => {
     setLoading(true);
     let params = (ean.length > 10) ? { EAN: ean } : { ISBN: ean };
@@ -160,14 +212,10 @@ function BarcodeScanner({ route, navigation }) {
     APIManager.fetchAlbum((result) => {
       setLoading(false);
       if (result.error == '' && result.items.length > 0) {
-        // On part sur un autre écran : la ref sera détruite, c'est propre.
         navigation.goBack();
         navigation.push('Album', { item: result.items[0] });
       } else {
         Helpers.showToast(true, "Aucun album trouvé", "...");
-        
-        // IMPORTANT : En cas d'échec, on déverrouille après 2 sec 
-        // pour laisser l'utilisateur scanner un autre code.
         setTimeout(() => {
           isScanning.current = false;
         }, 2000);
@@ -184,9 +232,10 @@ function BarcodeScanner({ route, navigation }) {
   }
 
   const openPropositionForm = async (ean) => {
-    APIManager.addProposition(ean)
+    APIManager.addProposition(ean);
   }
 
+  // ── Écran "pas de permission" ──
   if (!hasPermission) {
     return (
       <View style={styles.container}>
@@ -197,6 +246,7 @@ function BarcodeScanner({ route, navigation }) {
     );
   }
 
+  // ── Pas de device caméra trouvé ──
   if (device == null) {
     return (
       <View style={styles.container}>
@@ -210,9 +260,11 @@ function BarcodeScanner({ route, navigation }) {
       <Camera
         style={styles.preview}
         device={device}
-        isActive={isFocused}
+        isActive={cameraActive}
         codeScanner={codeScanner}
         torch={torchOn ? 'on' : 'off'}
+        onInitialized={() => setCameraReady(true)}
+        onError={(error) => console.warn('Camera error:', error)}
       >
         <View style={{ position: 'absolute', top: 0, width: '100%', backgroundColor: 'white', flexDirection: 'row', padding: 5 }}>
           <Icon name='FontAwesome5/barcode' size={45} color='black' style={{ marginLeft: 5 }} />
@@ -230,8 +282,18 @@ function BarcodeScanner({ route, navigation }) {
                 </Text>))}
           </Text>
         </View>
-
       </Camera>
+
+      {/* FIX 1 - Placeholder pendant l'initialisation caméra */}
+      {!cameraReady && (
+        <View style={styles.cameraPlaceholder}>
+          <ActivityIndicator size="large" color={bdovored} />
+          <Text style={{ color: 'white', marginTop: 10, fontSize: 14 }}>
+            Initialisation de la caméra...
+          </Text>
+        </View>
+      )}
+
       <Toast />
       <View style={{ position: "absolute", right: 0, bottom: 5 }}>
         <TouchableOpacity onPress={onAutoAddModePress}>
@@ -244,15 +306,15 @@ function BarcodeScanner({ route, navigation }) {
         </TouchableOpacity>
       </View>
       {showPropositionButton && (
-          <View style={{ position: "absolute", left: 0, bottom: 5 }}>
-            <TouchableOpacity
-              onPress={() => openPropositionForm(lastScannedEan)}
-              style={styles.cameraIcon}
-            >
-              <Icon name='MaterialIcons/add-circle' size={30} color={bdovored} />
-            </TouchableOpacity>
-          </View>
-        )}
+        <View style={{ position: "absolute", left: 0, bottom: 5 }}>
+          <TouchableOpacity
+            onPress={() => openPropositionForm(lastScannedEan)}
+            style={styles.cameraIcon}
+          >
+            <Icon name='MaterialIcons/add-circle' size={30} color={bdovored} />
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -278,6 +340,14 @@ const styles = StyleSheet.create({
   bottomOverlay: {
     position: "absolute",
     right: 0,
+  },
+  // FIX 1 - Style du placeholder pendant l'init caméra
+  cameraPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
   },
 });
 

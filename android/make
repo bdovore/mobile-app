@@ -13,13 +13,13 @@ APP_VERSION=$(grep versionName ./app/build.gradle | head -n 1 | sed 's/        v
 
 echo "Building bdovore version $APP_VERSION (code $VERSION_CODE)"
 
-./gradlew $1 assembleDebug
-cp app/build/outputs/apk/debug/app-debug.apk bdovore-$APP_VERSION-$VERSION_CODE-debug.apk
+#./gradlew $1 assembleDebug
+#cp app/build/outputs/apk/debug/app-debug.apk bdovore-$APP_VERSION-$VERSION_CODE-debug.apk
 
 ./gradlew $1 assembleRelease
 cp app/build/outputs/apk/release/app-release.apk bdovore-$APP_VERSION-$VERSION_CODE-release.apk
 
-./gradlew $1 bundleRelease
-cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-$VERSION_CODE-release.aab
+#./gradlew $1 bundleRelease
+#cp app/build/outputs/bundle/release/app-release.aab bdovore-$APP_VERSION-$VERSION_CODE-release.aab
 
 echo "App copied into current directory."
