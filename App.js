@@ -28,22 +28,38 @@
 
 import 'react-native-gesture-handler';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import SplashScreen from "react-native-splash-screen";
 import Toast from 'react-native-toast-message';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { rebuildSheet } from './styles/CommonStyles';
 import MainTab from './routes/MainTab';
+import RatingPrompt from './components/RatingPrompt';
 
 
 const App: () => Node = () => {
 
   useEffect(() => {
     SplashScreen.hide();
-  });
+    
+    // Incrémenter le compteur d'ouvetures d'application
+    const incrementAppOpens = async () => {
+      try {
+        const appOpens = await AsyncStorage.getItem('@appOpens');
+        const newCount = appOpens ? parseInt(appOpens) + 1 : 1;
+        await AsyncStorage.setItem('@appOpens', newCount.toString());
+        console.debug('App opens count: ' + newCount);
+      } catch (error) {
+        console.error('Error incrementing app opens:', error);
+      }
+    };
+    
+    incrementAppOpens();
+  }, []);
 
   global.isDarkMode = useColorScheme() === 'dark';
   console.debug('Set dark mode to ' + global.isDarkMode);
@@ -59,6 +75,7 @@ const App: () => Node = () => {
   return (
     <NavigationContainer theme={global.isDarkMode ? DarkTheme : DefaultTheme}>
       <MainTab />
+      <RatingPrompt />
       <Toast ref={(ref) => ToastRef = ref} />
     </NavigationContainer>
   );
