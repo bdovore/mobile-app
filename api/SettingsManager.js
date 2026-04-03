@@ -38,6 +38,7 @@ let globs = [
   ['collectionFetched',      false],
   ['confirmDeletion',        true],
   ['explicitContent',        false],
+  ['forceOffline',           false],
   ['hideSponsoredLinks',     false],
   ['imageOnWifi',            false],
   ['localTimestamp',         null],
@@ -68,6 +69,7 @@ class CSettingsManager {
 
     global.token = undefined;
     global.serverTimestamp = null;
+    global.forceOffline = false;
 
     // Set defined parameters in global array
     globs.forEach(v => global[v[0]] = v[1]);

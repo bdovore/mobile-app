@@ -110,10 +110,14 @@ export function pluralWord(nb, word) {
 
 export function setAndSaveGlobal(name, value) {
   global[name] = value;
+  if (value === null || value === undefined) {
+    AsyncStorage.removeItem(name).catch((error) => { });
+    return;
+  }
   if (typeof value == "boolean") {
     AsyncStorage.setItem(name, value ? '1' : '0').catch((error) => { });
   } else {
-    AsyncStorage.setItem(name, value).catch((error) => { });
+    AsyncStorage.setItem(name, String(value)).catch((error) => { });
   }
 }
 
