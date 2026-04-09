@@ -79,7 +79,16 @@ export function isValidToken() {
   return global.token && global.token.match(/([0-9]+)-([0-9a-f]+)/);
 }
 
-export function checkForToken(navigation = null, callback = null) {
+export function checkForToken(navigation = null, callback = null, loadingRetry = 0) {
+  if (global.settingsLoaded === false) {
+    if (callback && loadingRetry < 20) {
+      setTimeout(() => {
+        checkForToken(navigation, callback, loadingRetry + 1);
+      }, 100);
+    }
+    return null;
+  }
+
   const hasOnlineToken = Boolean(isValidToken());
   const hasOfflineToken = (typeof global.token == 'string' && global.token.startsWith('offline-'));
   const hasAnyToken = (typeof global.token == 'string' && global.token.length > 0);
