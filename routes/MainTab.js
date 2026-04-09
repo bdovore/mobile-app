@@ -30,7 +30,7 @@ import React, { useState } from 'react';
 import { Alert, Platform, Share, TouchableOpacity, Text, View } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { useRoute, getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { CommonActions, useRoute, getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { TouchableWithoutFeedback } from 'react-native-gesture-handler';
 
 import { bdovored, bdovorlightred, CommonStyles } from '../styles/CommonStyles';
@@ -109,10 +109,17 @@ const onShareSeriePress = async (item) => {
   });
 }
 
-const onChangeAuthorPresentationMode = async (route) => {
-  if (route && route.params && typeof route.params.onChangeAuthorPresentationMode === 'function') {
-    route.params.onChangeAuthorPresentationMode();
+const onChangeAuthorPresentationMode = async (route, navigation) => {
+  if (!route || !navigation) {
+    return;
   }
+
+  navigation.dispatch({
+    ...CommonActions.setParams({
+      authorPresentationModeRequest: Date.now()
+    }),
+    source: route.key,
+  });
 }
 
 const shareAlbumButton = (item) => {
@@ -155,10 +162,10 @@ const shareSerieButton = (item) => {
   );
 }
 
-const authorScreenButtons = (route, item) => {
+const authorScreenButtons = (route, navigation, item) => {
   return (
     <View style={{ flexDirection: 'row' }}>
-      <TouchableOpacity onPress={() => onChangeAuthorPresentationMode(route)} style={{ margin: 8 }}>
+      <TouchableOpacity onPress={() => onChangeAuthorPresentationMode(route, navigation)} style={{ margin: 8 }}>
         <Icon name='Ionicons/file-tray-full-outline' size={25} color={CommonStyles.iconStyle.color} />
       </TouchableOpacity>
       <TouchableOpacity onPress={() => onShareAuthorPress(item)} style={{ margin: 8 }}>
@@ -253,9 +260,9 @@ function CollectionScreens({ route, navigation }) {
           headerRight: () => shareAlbumButton(route.params.item)
         })} />
       <CollectionStack.Screen name='Auteur' component={AuteurScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
           title: Helpers.reverseAuteurName(route.params.author.PSEUDO),
-          headerRight: () => authorScreenButtons(route, route.params.author)
+          headerRight: () => authorScreenButtons(route, navigation, route.params.author)
         })} />
       <CollectionStack.Screen name='BarcodeScanner' component={BarcodeScanner}
         options={({ title: 'Scan code-barre' })} />
@@ -343,9 +350,9 @@ function WishlistScreens({ navigation }) {
           headerRight: () => shareAlbumButton(route.params.item)
         })} />
       <WishlistStack.Screen name='Auteur' component={AuteurScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
           title: Helpers.reverseAuteurName(route.params.author.PSEUDO),
-          headerRight: () => authorScreenButtons(route, route.params.author)
+          headerRight: () => authorScreenButtons(route, navigation, route.params.author)
         })} />
     </WishlistStack.Navigator>
   );
@@ -398,9 +405,9 @@ function ToCompleteScreens({ navigation }) {
           headerRight: () => shareAlbumButton(route.params.item)
         })} />
       <ToCompleteStack.Screen name='Auteur' component={AuteurScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
           title: Helpers.reverseAuteurName(route.params.author.PSEUDO),
-          headerRight: () => authorScreenButtons(route, route.params.author)
+          headerRight: () => authorScreenButtons(route, navigation, route.params.author)
         })} />
     </ToCompleteStack.Navigator>
   );
@@ -453,9 +460,9 @@ function NewsScreens({ navigation }) {
           headerRight: () => shareSerieButton(route.params.item)
         })} />
       <NewsStack.Screen name='Auteur' component={AuteurScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
           title: Helpers.reverseAuteurName(route.params.author.PSEUDO),
-          headerRight: () => authorScreenButtons(route, route.params.author)
+          headerRight: () => authorScreenButtons(route, navigation, route.params.author)
         })} />
     </NewsStack.Navigator>
   );
@@ -476,9 +483,9 @@ function SearchScreens({ navigation }) {
           headerRight: () => shareAlbumButton(route.params.item)
         })} />
       <SearchStack.Screen name='Auteur' component={AuteurScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
           title: Helpers.reverseAuteurName(route.params.author.PSEUDO),
-          headerRight: () => authorScreenButtons(route, route.params.author)
+          headerRight: () => authorScreenButtons(route, navigation, route.params.author)
         })} />
       <SearchStack.Screen name='BarcodeScanner' component={BarcodeScanner}
         options={({ title: 'Scan code-barre' })} />
@@ -512,9 +519,9 @@ function CommentsScreens({ navigation }) {
           headerRight: () => shareAlbumButton(route.params.item)
         })} />
       <CommentsStack.Screen name='Auteur' component={AuteurScreen}
-        options={({ route }) => ({
+        options={({ route, navigation }) => ({
           title: Helpers.reverseAuteurName(route.params.author.PSEUDO),
-          headerRight: () => authorScreenButtons(route, route.params.author)
+          headerRight: () => authorScreenButtons(route, navigation, route.params.author)
         })} />
     </CommentsStack.Navigator>
   )

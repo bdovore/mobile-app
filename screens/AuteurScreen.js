@@ -89,8 +89,10 @@ function AuteurScreen({ route, navigation }) {
   }, []);
 
   useEffect(() => {
-    navigation.setParams({ onChangeAuthorPresentationMode });
-  }, [navigation, displayMode, descendingDateSort]);
+    if (route.params && route.params.authorPresentationModeRequest) {
+      setShowPresentationModePanel(true);
+    }
+  }, [route.params?.authorPresentationModeRequest]);
 
   const refreshDataIfNeeded = async () => {
     if (nbAlbums < 0) {
@@ -273,7 +275,7 @@ function AuteurScreen({ route, navigation }) {
 
           <ListItem containerStyle={CommonStyles.bottomSheetTitleStyle}>
             <ListItem.Content>
-              <ListItem.Title style={[CommonStyles.bottomSheetItemTextStyle, CommonStyles.defaultText]}>Mode de présentation</ListItem.Title>
+              <ListItem.Title style={[CommonStyles.bottomSheetItemTextStyle, CommonStyles.defaultText]}>Tri des albums</ListItem.Title>
             </ListItem.Content>
           </ListItem>
 
