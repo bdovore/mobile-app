@@ -28,8 +28,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { SectionList, Text, TouchableOpacity, View } from 'react-native';
+import { ListItem } from 'react-native-elements';
 
 import { AlbumItem } from '../components/AlbumItem';
+import { BottomSheet } from '../components/BottomSheet';
 import { CollapsableSection } from '../components/CollapsableSection';
 import { CommonStyles } from '../styles/CommonStyles';
 import { CoverImage } from '../components/CoverImage';
@@ -51,11 +53,30 @@ function AuteurScreen({ route, navigation }) {
   const [nbAlbums, setNbAlbums] = useState(-1);
   const [nbSeries, setNbSeries] = useState(-1);
   const [nbUserAlbums, setNbUserAlbums] = useState(0);
+  const [showPresentationModePanel, setShowPresentationModePanel] = useState(false);
   const [toggleElement, setToggleElement] = useState(Date.now());
 
   const toggle = () => {
     setToggleElement(Date.now());
     refreshData();
+  }
+
+  const setAuthorPresentationMode = (mode) => {
+    if (mode == 'series') {
+      setDisplayMode('series');
+      return;
+    }
+    setDisplayMode('date');
+    setDescendingDateSort(mode == 'latest');
+  }
+
+  const onChangeAuthorPresentationMode = () => {
+    setShowPresentationModePanel(true);
+  }
+
+  const onPresentationModeSelected = (mode) => {
+    setAuthorPresentationMode(mode);
+    setShowPresentationModePanel(false);
   }
 
   useEffect(() => {
@@ -66,6 +87,10 @@ function AuteurScreen({ route, navigation }) {
     });
     return willFocusSubscription;
   }, []);
+
+  useEffect(() => {
+    navigation.setParams({ onChangeAuthorPresentationMode });
+  }, [navigation, displayMode, descendingDateSort]);
 
   const refreshDataIfNeeded = async () => {
     if (nbAlbums < 0) {
@@ -220,32 +245,6 @@ function AuteurScreen({ route, navigation }) {
           {errortext}
         </Text>
       ) : null}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 8 }}>
-        <TouchableOpacity onPress={() => setDisplayMode('series')}>
-          <Text style={[CommonStyles.linkText, {
-            marginHorizontal: 8,
-            opacity: displayMode == 'series' ? 1 : 0.6,
-            fontWeight: displayMode == 'series' ? 'bold' : 'normal'
-          }]}>
-            Par série
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          if (displayMode == 'date') {
-            setDescendingDateSort(!descendingDateSort);
-          } else {
-            setDisplayMode('date');
-          }
-        }}>
-          <Text style={[CommonStyles.linkText, {
-            marginHorizontal: 8,
-            opacity: displayMode == 'date' ? 1 : 0.6,
-            fontWeight: displayMode == 'date' ? 'bold' : 'normal'
-          }]}>
-            {descendingDateSort ? 'Dernières parutions' : 'Premières parutions'}
-          </Text>
-        </TouchableOpacity>
-      </View>
       <SectionList
         style={{ flex: 1, marginHorizontal: 1 }}
         maxToRenderPerBatch={10}
@@ -257,14 +256,58 @@ function AuteurScreen({ route, navigation }) {
         renderSectionHeader={({ section: { title, data } }) => (displayMode == 'series' ?
           <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'
             onPress={()=>{onPressSerie(data[0].ID_SERIE)}}>{title}</Text> :
-          <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'
-            onPress={() => setDescendingDateSort(!descendingDateSort)}>
+          <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'>
             {title}
           </Text>)}
         stickySectionHeadersEnabled={true}
         ItemSeparatorComponent={Helpers.renderSeparator}
         extraData={toggleElement}
       />
+
+      <BottomSheet
+        isVisible={showPresentationModePanel}
+        containerStyle={CommonStyles.bottomSheetContainerStyle}
+        visibleSetter={setShowPresentationModePanel}>
+        <View style={[CommonStyles.modalViewStyle, { height: '45%', paddingTop: 10, paddingBottom: 10, marginBottom: -10 }]}>
+          {Helpers.renderAnchor()}
+
+          <ListItem containerStyle={CommonStyles.bottomSheetTitleStyle}>
+            <ListItem.Content>
+              <ListItem.Title style={[CommonStyles.bottomSheetItemTextStyle, CommonStyles.defaultText]}>Mode de présentation</ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+
+          <ListItem
+            containerStyle={displayMode == 'series' ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+            onPress={() => onPresentationModeSelected('series')}>
+            <ListItem.Content>
+              <ListItem.Title style={displayMode == 'series' ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+                Par série
+              </ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+
+          <ListItem
+            containerStyle={displayMode == 'date' && descendingDateSort ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+            onPress={() => onPresentationModeSelected('latest')}>
+            <ListItem.Content>
+              <ListItem.Title style={displayMode == 'date' && descendingDateSort ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+                Dernières parutions
+              </ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+
+          <ListItem
+            containerStyle={displayMode == 'date' && !descendingDateSort ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+            onPress={() => onPresentationModeSelected('oldest')}>
+            <ListItem.Content>
+              <ListItem.Title style={displayMode == 'date' && !descendingDateSort ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+                Premières parutions
+              </ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+        </View>
+      </BottomSheet>
     </View>
   );
 }
