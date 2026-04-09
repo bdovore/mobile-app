@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { SectionList, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 
@@ -55,6 +55,7 @@ function AuteurScreen({ route, navigation }) {
   const [nbUserAlbums, setNbUserAlbums] = useState(0);
   const [showPresentationModePanel, setShowPresentationModePanel] = useState(false);
   const [toggleElement, setToggleElement] = useState(Date.now());
+  const sectionListRef = useRef();
 
   const toggle = () => {
     setToggleElement(Date.now());
@@ -79,6 +80,32 @@ function AuteurScreen({ route, navigation }) {
     setShowPresentationModePanel(false);
   }
 
+  const scrollToTop = () => {
+    const sectionList = sectionListRef.current;
+    if (!sectionList) {
+      return;
+    }
+
+    const sections = displayMode == 'series'
+      ? auteurAlbumsBySeries
+      : [{ title: descendingDateSort ? 'Dernières parutions' : 'Premières parutions', id: -1, data: displayedAlbumsByDate }];
+
+    const firstSection = sections.length > 0 ? sections[0] : null;
+    const hasItem = firstSection && Array.isArray(firstSection.data) && firstSection.data.length > 0;
+
+    if (hasItem && typeof sectionList.scrollToLocation === 'function') {
+      sectionList.scrollToLocation({
+        sectionIndex: 0,
+        itemIndex: 0,
+        viewOffset: 0,
+        animated: false,
+      });
+      return;
+    }
+
+    Helpers.safeScrollToOffset(sectionListRef, { offset: 0, animated: false });
+  }
+
   useEffect(() => {
     refreshDataIfNeeded();
     // Make sure data is refreshed when login/token changed
@@ -89,8 +116,17 @@ function AuteurScreen({ route, navigation }) {
   }, []);
 
   useEffect(() => {
-    navigation.setParams({ onChangeAuthorPresentationMode });
-  }, [navigation, displayMode, descendingDateSort]);
+    if (route.params && route.params.authorPresentationModeRequest) {
+      setShowPresentationModePanel(true);
+    }
+  }, [route.params?.authorPresentationModeRequest]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      scrollToTop();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [displayMode, descendingDateSort]);
 
   const refreshDataIfNeeded = async () => {
     if (nbAlbums < 0) {
@@ -203,6 +239,21 @@ function AuteurScreen({ route, navigation }) {
   const name = author.PRENOM && author.NOM ? (author.PRENOM + ' ' + author.NOM) : '';
   const displayedAlbumsByDate = descendingDateSort ? auteurAlbumsByDate : auteurAlbumsByDate.slice().reverse();
 
+  const renderPresentationModeItem = (label, mode, isSelected) => {
+    return (
+      <ListItem
+        key={mode}
+        containerStyle={isSelected ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+        onPress={() => onPresentationModeSelected(mode)}>
+        <ListItem.Content>
+          <ListItem.Title style={isSelected ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+            {label}
+          </ListItem.Title>
+        </ListItem.Content>
+      </ListItem>
+    );
+  }
+
   return (
     <View style={CommonStyles.screenStyle}>
       <CollapsableSection sectionName='Infos Auteur' isCollapsed={false} style={{ marginTop: 0, marginBottom: 5 }} noAnimation={true} >
@@ -246,6 +297,7 @@ function AuteurScreen({ route, navigation }) {
         </Text>
       ) : null}
       <SectionList
+        ref={sectionListRef}
         style={{ flex: 1, marginHorizontal: 1 }}
         maxToRenderPerBatch={10}
         windowSize={10}
@@ -273,39 +325,13 @@ function AuteurScreen({ route, navigation }) {
 
           <ListItem containerStyle={CommonStyles.bottomSheetTitleStyle}>
             <ListItem.Content>
-              <ListItem.Title style={[CommonStyles.bottomSheetItemTextStyle, CommonStyles.defaultText]}>Mode de présentation</ListItem.Title>
+              <ListItem.Title style={[CommonStyles.bottomSheetItemTextStyle, CommonStyles.defaultText]}>Tri des albums</ListItem.Title>
             </ListItem.Content>
           </ListItem>
 
-          <ListItem
-            containerStyle={displayMode == 'series' ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
-            onPress={() => onPresentationModeSelected('series')}>
-            <ListItem.Content>
-              <ListItem.Title style={displayMode == 'series' ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
-                Par série
-              </ListItem.Title>
-            </ListItem.Content>
-          </ListItem>
-
-          <ListItem
-            containerStyle={displayMode == 'date' && descendingDateSort ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
-            onPress={() => onPresentationModeSelected('latest')}>
-            <ListItem.Content>
-              <ListItem.Title style={displayMode == 'date' && descendingDateSort ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
-                Dernières parutions
-              </ListItem.Title>
-            </ListItem.Content>
-          </ListItem>
-
-          <ListItem
-            containerStyle={displayMode == 'date' && !descendingDateSort ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
-            onPress={() => onPresentationModeSelected('oldest')}>
-            <ListItem.Content>
-              <ListItem.Title style={displayMode == 'date' && !descendingDateSort ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
-                Premières parutions
-              </ListItem.Title>
-            </ListItem.Content>
-          </ListItem>
+          {renderPresentationModeItem('Par série', 'series', displayMode == 'series')}
+          {renderPresentationModeItem('Dernières parutions', 'latest', displayMode == 'date' && descendingDateSort)}
+          {renderPresentationModeItem('Premières parutions', 'oldest', displayMode == 'date' && !descendingDateSort)}
         </View>
       </BottomSheet>
     </View>
