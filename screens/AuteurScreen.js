@@ -28,8 +28,10 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { SectionList, Text, TouchableOpacity, View } from 'react-native';
+import { ListItem } from 'react-native-elements';
 
 import { AlbumItem } from '../components/AlbumItem';
+import { BottomSheet } from '../components/BottomSheet';
 import { CollapsableSection } from '../components/CollapsableSection';
 import { CommonStyles } from '../styles/CommonStyles';
 import { CoverImage } from '../components/CoverImage';
@@ -41,18 +43,40 @@ import CollectionManager from '../api/CollectionManager';
 
 function AuteurScreen({ route, navigation }) {
 
-  const [auteurAlbums, setAuteurAlbums] = useState([]);
+  const [auteurAlbumsBySeries, setAuteurAlbumsBySeries] = useState([]);
+  const [auteurAlbumsByDate, setAuteurAlbumsByDate] = useState([]);
+  const [displayMode, setDisplayMode] = useState('series');
+  const [descendingDateSort, setDescendingDateSort] = useState(true);
   const [author, setAuthor] = useState(route.params.author);
   const [errortext, setErrortext] = useState('');
   const [loading, setLoading] = useState(false);
   const [nbAlbums, setNbAlbums] = useState(-1);
   const [nbSeries, setNbSeries] = useState(-1);
   const [nbUserAlbums, setNbUserAlbums] = useState(0);
+  const [showPresentationModePanel, setShowPresentationModePanel] = useState(false);
   const [toggleElement, setToggleElement] = useState(Date.now());
 
   const toggle = () => {
     setToggleElement(Date.now());
     refreshData();
+  }
+
+  const setAuthorPresentationMode = (mode) => {
+    if (mode == 'series') {
+      setDisplayMode('series');
+      return;
+    }
+    setDisplayMode('date');
+    setDescendingDateSort(mode == 'latest');
+  }
+
+  const onChangeAuthorPresentationMode = () => {
+    setShowPresentationModePanel(true);
+  }
+
+  const onPresentationModeSelected = (mode) => {
+    setAuthorPresentationMode(mode);
+    setShowPresentationModePanel(false);
   }
 
   useEffect(() => {
@@ -64,6 +88,12 @@ function AuteurScreen({ route, navigation }) {
     return willFocusSubscription;
   }, []);
 
+  useEffect(() => {
+    if (route.params && route.params.authorPresentationModeRequest) {
+      setShowPresentationModePanel(true);
+    }
+  }, [route.params?.authorPresentationModeRequest]);
+
   const refreshDataIfNeeded = async () => {
     if (nbAlbums < 0) {
       console.debug("refresh author data");
@@ -73,7 +103,8 @@ function AuteurScreen({ route, navigation }) {
 
   const fetchData = () => {
     setLoading(true);
-    setAuteurAlbums([]);
+    setAuteurAlbumsBySeries([]);
+    setAuteurAlbumsByDate([]);
     setNbSeries(-1);
     setNbAlbums(-1);
     setErrortext('');
@@ -81,6 +112,28 @@ function AuteurScreen({ route, navigation }) {
       Helpers.showToast(false, 'Téléchargement de la fiche auteur...');
     }
     APIManager.fetchAlbum(onAuteurAlbumsFetched, { id_auteur: author.ID_AUTEUR });
+  }
+
+  const publicationDateToTimestamp = (album) => {
+    const publicationDate = Helpers.getDateParutionAlbum(album);
+    if (!publicationDate) {
+      return 0;
+    }
+
+    const parts = publicationDate.split('/').map((value) => parseInt(value, 10));
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      return Date.UTC(year, month - 1, day);
+    }
+    if (parts.length === 2) {
+      const [month, year] = parts;
+      return Date.UTC(year, month - 1, 1);
+    }
+    if (parts.length === 1) {
+      return Date.UTC(parts[0], 0, 1);
+    }
+
+    return 0;
   }
 
   const onAuteurAlbumsFetched = async (result) => {
@@ -111,9 +164,15 @@ function AuteurScreen({ route, navigation }) {
     });
 
     CollectionManager.refreshAlbumSeries(albumsArray);
+
+    const albumsByDate = data.slice().sort((album1, album2) => {
+      return publicationDateToTimestamp(album2) - publicationDateToTimestamp(album1);
+    });
+
     setNbUserAlbums(CollectionManager.getNbOfUserAlbumsByAuthor(author.ID_AUTEUR));
 
-    setAuteurAlbums(albumsArray);
+    setAuteurAlbumsBySeries(albumsArray);
+    setAuteurAlbumsByDate(albumsByDate);
     setNbSeries(albumsArray.length);
     setNbAlbums(result.totalItems);
     setErrortext(result.error);
@@ -121,13 +180,13 @@ function AuteurScreen({ route, navigation }) {
   }
 
   const refreshData = () => {
-    CollectionManager.refreshAlbumSeries(auteurAlbums);
+    CollectionManager.refreshAlbumSeries(auteurAlbumsBySeries);
     setNbUserAlbums(CollectionManager.getNbOfUserAlbumsByAuthor(author.ID_AUTEUR));
   }
 
   const renderAlbum = useCallback(({ item, index }) =>
     Helpers.isValid(item) &&
-    <AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} dontShowSerieScreen={false} refreshCallback={toggle} />);
+    <AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} dontShowSerieScreen={false} showEditionDate={true} refreshCallback={toggle} />);
 
   const keyExtractor = useCallback((item, index) =>
     Helpers.isValid(item) ? Helpers.getAlbumUID(item) : index);
@@ -144,6 +203,7 @@ function AuteurScreen({ route, navigation }) {
   }
 
   const name = author.PRENOM && author.NOM ? (author.PRENOM + ' ' + author.NOM) : '';
+  const displayedAlbumsByDate = descendingDateSort ? auteurAlbumsByDate : auteurAlbumsByDate.slice().reverse();
 
   return (
     <View style={CommonStyles.screenStyle}>
@@ -192,16 +252,64 @@ function AuteurScreen({ route, navigation }) {
         maxToRenderPerBatch={10}
         windowSize={10}
         disableVirtualization={true}
-        sections={auteurAlbums}
+        sections={displayMode == 'series' ? auteurAlbumsBySeries : [{ title: descendingDateSort ? 'Dernières parutions' : 'Premières parutions', id: -1, data: displayedAlbumsByDate }]}
         keyExtractor={keyExtractor}
         renderItem={renderAlbum}
-        renderSectionHeader={({ section: { title, data } }) => (
+        renderSectionHeader={({ section: { title, data } }) => (displayMode == 'series' ?
           <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'
-            onPress={()=>{onPressSerie(data[0].ID_SERIE)}}>{title}</Text>)}
+            onPress={()=>{onPressSerie(data[0].ID_SERIE)}}>{title}</Text> :
+          <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'>
+            {title}
+          </Text>)}
         stickySectionHeadersEnabled={true}
         ItemSeparatorComponent={Helpers.renderSeparator}
         extraData={toggleElement}
       />
+
+      <BottomSheet
+        isVisible={showPresentationModePanel}
+        containerStyle={CommonStyles.bottomSheetContainerStyle}
+        visibleSetter={setShowPresentationModePanel}>
+        <View style={[CommonStyles.modalViewStyle, { height: '45%', paddingTop: 10, paddingBottom: 10, marginBottom: -10 }]}>
+          {Helpers.renderAnchor()}
+
+          <ListItem containerStyle={CommonStyles.bottomSheetTitleStyle}>
+            <ListItem.Content>
+              <ListItem.Title style={[CommonStyles.bottomSheetItemTextStyle, CommonStyles.defaultText]}>Tri des albums</ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+
+          <ListItem
+            containerStyle={displayMode == 'series' ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+            onPress={() => onPresentationModeSelected('series')}>
+            <ListItem.Content>
+              <ListItem.Title style={displayMode == 'series' ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+                Par série
+              </ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+
+          <ListItem
+            containerStyle={displayMode == 'date' && descendingDateSort ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+            onPress={() => onPresentationModeSelected('latest')}>
+            <ListItem.Content>
+              <ListItem.Title style={displayMode == 'date' && descendingDateSort ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+                Dernières parutions
+              </ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+
+          <ListItem
+            containerStyle={displayMode == 'date' && !descendingDateSort ? CommonStyles.bottomSheetSelectedItemContainerStyle : CommonStyles.bottomSheetItemContainerStyle}
+            onPress={() => onPresentationModeSelected('oldest')}>
+            <ListItem.Content>
+              <ListItem.Title style={displayMode == 'date' && !descendingDateSort ? CommonStyles.bottomSheetSelectedItemTextStyle : CommonStyles.bottomSheetItemTextStyle}>
+                Premières parutions
+              </ListItem.Title>
+            </ListItem.Content>
+          </ListItem>
+        </View>
+      </BottomSheet>
     </View>
   );
 }

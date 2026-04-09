@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { useIsFocused } from '@react-navigation/native';
@@ -54,14 +54,32 @@ function BarcodeScanner({ route, navigation }) {
   const [showPropositionButton, setShowPropositionButton] = useState(false);
   const [lastScannedEan, setLastScannedEan] = useState('');
   const [lastAddedAlbum, setLastAddedAlbum] = useState('');
-  const [hasPermission, setHasPermission] = useState(false);
-  
+  const [hasPermission, setHasPermission] = useState(null);
+
 
   // FIX 1 - Écran noir : délai d'activation + état "caméra prête"
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraReady, setCameraReady] = useState(false);
 
   const device = useCameraDevice('back');
+
+  const getCameraPermissionStatus = async () => {
+    return await Promise.resolve(Camera.getCameraPermissionStatus());
+  };
+
+  const requestCameraPermission = async () => {
+    return await Promise.resolve(Camera.requestCameraPermission());
+  };
+
+  const syncCameraPermission = async (requestIfNeeded = false) => {
+    let status = await getCameraPermissionStatus();
+    if (status !== 'granted' && requestIfNeeded) {
+      status = await requestCameraPermission();
+    }
+    const granted = status === 'granted';
+    setHasPermission(granted);
+    return granted;
+  };
 
   // ──────────────────────────────────────────────
   // FIX 2 - Permission : re-check à chaque focus
@@ -74,20 +92,7 @@ function BarcodeScanner({ route, navigation }) {
   if (!isFocused) return;
 
   const checkPermission = async () => {
-    let status = Camera.getCameraPermissionStatus();
-
-    if (status === 'granted') {
-      setHasPermission(true);
-      return;
-    }
-
-    // Si pas granted, on tente une demande.
-    // Le système Android décide s'il affiche le dialogue ou non :
-    // - not-determined → dialogue
-    // - denied après one-time expiré → dialogue
-    // - denied définitif ("ne plus demander") → pas de dialogue, retourne denied
-    status = await Camera.requestCameraPermission();
-    setHasPermission(status === 'granted');
+      await syncCameraPermission(true);
   };
 
   checkPermission();
@@ -100,8 +105,7 @@ function BarcodeScanner({ route, navigation }) {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active' && isFocused) {
-        const status = Camera.getCameraPermissionStatus();
-        setHasPermission(status === 'granted');
+        syncCameraPermission(false);
       }
     });
     return () => subscription.remove();
@@ -236,12 +240,26 @@ function BarcodeScanner({ route, navigation }) {
   }
 
   // ── Écran "pas de permission" ──
+  if (hasPermission === null) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={bdovored} />
+      </View>
+    );
+  }
+
   if (!hasPermission) {
     return (
       <View style={styles.container}>
         <Text style={{ textAlign: 'center', margin: 20 }}>
           Permission d'utilisation de la caméra requise
         </Text>
+        <TouchableOpacity
+          style={[CommonStyles.loginConnectionButtonStyle, { marginBottom: 30 }]}
+          onPress={() => syncCameraPermission(true)}
+        >
+          <Text style={CommonStyles.loginConnectionTextStyle}>Réessayer</Text>
+        </TouchableOpacity>
       </View>
     );
   }
