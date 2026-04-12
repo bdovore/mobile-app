@@ -45,7 +45,7 @@ function AuteurScreen({ route, navigation }) {
 
   const [auteurAlbumsBySeries, setAuteurAlbumsBySeries] = useState([]);
   const [auteurAlbumsByDate, setAuteurAlbumsByDate] = useState([]);
-  const [displayMode, setDisplayMode] = useState('series');
+  const [displayMode, setDisplayMode] = useState('date');
   const [descendingDateSort, setDescendingDateSort] = useState(true);
   const [author, setAuthor] = useState(route.params.author);
   const [errortext, setErrortext] = useState('');
@@ -302,7 +302,7 @@ function AuteurScreen({ route, navigation }) {
         maxToRenderPerBatch={10}
         windowSize={10}
         disableVirtualization={true}
-        sections={displayMode == 'series' ? auteurAlbumsBySeries : [{ title: descendingDateSort ? 'Dernières parutions' : 'Premières parutions', id: -1, data: displayedAlbumsByDate }]}
+        sections={displayMode == 'series' ? auteurAlbumsBySeries : [{ title: descendingDateSort ? 'Par date (récent d\'abord)' : 'Par date (ancien d\'abord)', id: -1, data: displayedAlbumsByDate }]}
         keyExtractor={keyExtractor}
         renderItem={renderAlbum}
         renderSectionHeader={({ section: { title, data } }) => (displayMode == 'series' ?
@@ -329,9 +329,9 @@ function AuteurScreen({ route, navigation }) {
             </ListItem.Content>
           </ListItem>
 
-          {renderPresentationModeItem('Par série', 'series', displayMode == 'series')}
-          {renderPresentationModeItem('Dernières parutions', 'latest', displayMode == 'date' && descendingDateSort)}
-          {renderPresentationModeItem('Premières parutions', 'oldest', displayMode == 'date' && !descendingDateSort)}
+          {renderPresentationModeItem('Par date (récent d\'abord)', 'latest', displayMode == 'date' && descendingDateSort)}
+          {renderPresentationModeItem('Par date (ancien d\'abord)', 'oldest', displayMode == 'date' && !descendingDateSort)}
+          {renderPresentationModeItem('Par série (A-Z)', 'series', displayMode == 'series')}
         </View>
       </BottomSheet>
     </View>
