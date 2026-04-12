@@ -79,24 +79,46 @@ export function isValidToken() {
   return global.token && global.token.match(/([0-9]+)-([0-9a-f]+)/);
 }
 
-export function checkForToken(navigation = null, callback = null) {
+export function checkForToken(navigation = null, callback = null, loadingRetry = 0) {
+  if (global.settingsLoaded === false) {
+    if (callback && loadingRetry < 20) {
+      setTimeout(() => {
+        checkForToken(navigation, callback, loadingRetry + 1);
+      }, 100);
+    }
+    return null;
+  }
+
+  const hasOnlineToken = Boolean(isValidToken());
+  const hasOfflineToken = (typeof global.token == 'string' && global.token.startsWith('offline-'));
+  const hasAnyToken = (typeof global.token == 'string' && global.token.length > 0);
+  const hasStoredCredentials = Boolean(global.login && global.passwd);
+
   try {
     // Move to login page if no token available
-    if (isValidToken()) {
+    if (hasOnlineToken) {
       return callback ? callback() : global.token;
     }
-    if (global.forceOffline) {
+    if (global.forceOffline && hasOfflineToken) {
       return callback ? callback() : 'offline-';
     }
   } catch (error) {
     console.log(error);
   }
 
-  if (!global.token && global.login && global.passwd) {
+  if (global.forceOffline && !hasOfflineToken) {
+    console.debug('Offline mode requested without offline token.');
+    if (navigation) {
+      return navigation.navigate('Login');
+    }
+    return null;
+  }
+
+  if ((!hasAnyToken || !hasOnlineToken) && hasStoredCredentials && !global.forceOffline) {
     console.debug('undefined token -> relogin');
     return reloginBDovore(navigation, callback);
   }
-  if (!global.token && navigation) {
+  if ((!hasAnyToken || !hasOnlineToken) && navigation) {
     return navigation.navigate('Login');
   }
   if (callback) {
@@ -106,7 +128,7 @@ export function checkForToken(navigation = null, callback = null) {
       console.debug(error);
     }
   }
-  return global.token;
+  return hasAnyToken ? global.token : null;
 }
 
 export function fetchUserPrefs(navigation = null, callback = null) {

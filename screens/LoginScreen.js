@@ -38,21 +38,38 @@ import * as Helpers from '../api/Helpers';
 import CollectionManager from '../api/CollectionManager';
 
 
-const pkg = require('../app.json');
-
 function LoginScreen({ navigation }) {
+
+  const isOfflineToken = (token) => {
+    return typeof token == 'string' && token.startsWith('offline-');
+  }
+
+  const hasValidSession = () => {
+    const hasOnlineToken = Boolean(APIManager.isValidToken());
+    const hasOfflineSession = global.forceOffline === true && isOfflineToken(global.token);
+    const hasLogin = typeof global.login == 'string' && global.login.trim().length > 0;
+    return hasLogin && (hasOnlineToken || hasOfflineSession);
+  }
 
   const [errortext, setErrortext] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwd, setPasswd] = useState('');
   const [pseudo, setPseudo] = useState('');
-  const [isConnected,setIsConnected] = useState(login != null);
+  const [isConnected, setIsConnected] = useState(hasValidSession());
   const passwdInputRef = useRef();
 
   useEffect(() => {
-    setPseudo(global.login);
-    setPasswd(global.passwd);
-  }, []);
+    const refreshState = () => {
+      setPseudo(global.login ?? '');
+      setPasswd(global.passwd ?? '');
+      setIsConnected(hasValidSession());
+    };
+
+    refreshState();
+    const unsubscribe = navigation.addListener('focus', refreshState);
+
+    return unsubscribe;
+  }, [navigation]);
 
   const resetDatabaseForNewLogin = () => {
     if (pseudo != global.login) {
@@ -62,6 +79,16 @@ function LoginScreen({ navigation }) {
   }
 
   const onLoginPress = () => {
+    if (!pseudo) {
+      setErrortext('Veuillez renseigner le pseudo.');
+      return;
+    }
+    if (!passwd) {
+      setErrortext('Veuillez renseigner le mot de passe.');
+      return;
+    }
+
+    setErrortext('');
     setLoading(true);
     global.forceOffline = false;
 
@@ -70,6 +97,7 @@ function LoginScreen({ navigation }) {
       if (global.isConnected) {
         APIManager.loginBDovore(pseudo, passwd, onConnected);
       } else {
+        global.forceOffline = true;
         Helpers.showToast(false, "Utilisation en mode off-line.", "Connexion Internet désactivée.")
         onConnected({ error: '', token: 'offline-' + Date.now() });
       }
@@ -86,6 +114,19 @@ function LoginScreen({ navigation }) {
     onConnected({ error: '', token: 'offline-' + Date.now() });
   }
 
+  const onOnlinePress = () => {
+    global.forceOffline = false;
+
+    if (pseudo && passwd) {
+      onLoginPress();
+      return;
+    }
+
+    Helpers.setAndSaveGlobal('token', null);
+    setIsConnected(false);
+    setErrortext('Mode connecté activé. Veuillez vous reconnecter.');
+  }
+
   const onConnected = (data) => {
     setLoading(false);
     setErrortext(data.error);
@@ -95,7 +136,13 @@ function LoginScreen({ navigation }) {
       Helpers.setAndSaveGlobal('token', data.token);
       Helpers.setAndSaveGlobal('login', pseudo);
       Helpers.setAndSaveGlobal('passwd', passwd);
-      navigation.goBack();
+      const connected = hasValidSession();
+      setIsConnected(connected);
+      if (connected) {
+        navigation.goBack();
+      } else {
+        setErrortext('Session invalide. Veuillez vous reconnecter.');
+      }
     }
     else {
       console.debug('error on connection: ' + data.error);
@@ -204,8 +251,8 @@ function LoginScreen({ navigation }) {
     Helpers.setAndSaveGlobal('login', null);
     Helpers.setAndSaveGlobal('passwd', null);
 
-    setPseudo(global.login);
-    setPasswd(global.passwd);
+    setPseudo('');
+    setPasswd('');
     setIsConnected(false);
   }
 
@@ -234,7 +281,10 @@ function LoginScreen({ navigation }) {
             </TouchableOpacity>
             <View style={{height: 20}}></View>
 
-            <Text onPress={onOfflinePress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Mode offline</Text>
+            {global.forceOffline ?
+              <Text onPress={onOnlinePress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Mode connecté</Text>
+              : <Text onPress={onOfflinePress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Mode hors ligne</Text>
+            }
             <View style={{height: 100}}></View>
             <TouchableOpacity
               style={{backgroundColor: "lightgray", alignItems: 'center'}}

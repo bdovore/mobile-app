@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ANDROID_STUDIO_HOME=/opt/android-studio-2025.2.1/android-studio
+ANDROID_STUDIO_HOME=/opt/android-studio
 export ANDROID_SDK_ROOT=/home/joachim/Android/Sdk
 
 export NODE_OPTIONS=--openssl-legacy-provider

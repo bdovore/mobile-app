@@ -38,12 +38,14 @@ let globs = [
   ['collectionFetched',      false],
   ['confirmDeletion',        true],
   ['explicitContent',        false],
+  ['forceOffline',           false],
   ['hideSponsoredLinks',     false],
   ['imageOnWifi',            false],
   ['localTimestamp',         null],
   ['login',                  null],
   ['openCollection',         false],
   ['passwd',                 null],
+  ['token',                  null],
   ['retractableButtons',     false],
   ['showBDovoreIds',         false],
   ['showConnectionMessages', false],
@@ -68,6 +70,8 @@ class CSettingsManager {
 
     global.token = undefined;
     global.serverTimestamp = null;
+    global.forceOffline = false;
+    global.settingsLoaded = false;
 
     // Set defined parameters in global array
     globs.forEach(v => global[v[0]] = v[1]);
@@ -88,7 +92,10 @@ class CSettingsManager {
       response.forEach((v) => {
         setKey(v[0], v[1]);
       });
-    }).catch(() => { });
+      global.settingsLoaded = true;
+    }).catch(() => {
+      global.settingsLoaded = true;
+    });
   }
 
   connectionCallback(state) {
