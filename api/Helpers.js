@@ -380,6 +380,10 @@ export function capitalize(str) {
   return str ? str[0].toUpperCase() + str.substring(1).toLowerCase() : str;
 }
 
+export function capitalizedWords(str) {
+  return str ? str.split(' ').map(word => capitalize(word)).join(' ') : str;
+}
+
 export function isAlbumBW(album) {
   return album.copseudo == '<n&b>';
 }
