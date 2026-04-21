@@ -311,6 +311,8 @@ export function removeHTMLTags(text) {
     text = text.replace(/\n /, '\n');
     text = text.replace(/\n\s\n*/g, '\n');// remove multiple returns occurences
     text = text.replace(/so[uo]rce:/, 'Source :'); // remove trailing carriage returns
+    text = text.replace(/ +/gi, ' '); // remove multiple spaces occurences
+    text = text.replace(/\n /gi, '\n'); // remove space after carriage return
   }
   return text;
 }
@@ -378,6 +380,10 @@ export function reverseAuteurName(name) {
 
 export function capitalize(str) {
   return str ? str[0].toUpperCase() + str.substring(1).toLowerCase() : str;
+}
+
+export function capitalizedWords(str) {
+  return str ? str.split(' ').map(word => capitalize(word)).join(' ') : str;
 }
 
 export function isAlbumBW(album) {

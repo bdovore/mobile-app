@@ -27,7 +27,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { SectionList, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, SectionList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 
 import { AlbumItem } from '../components/AlbumItem';
@@ -261,12 +261,17 @@ function AuteurScreen({ route, navigation }) {
           <TouchableOpacity onPress={onPressAuthorImage} style={{ marginLeft: -15, marginRight: 0 }}>
             <CoverImage item={author} category={2} style={{ height: 125 }} noResize={false} />
           </TouchableOpacity>
-          <View style={{flex: 1, marginTop: 2 }}>
+          <View style={{ flex: 1, marginTop: 2 }}>
             <Text style={[CommonStyles.defaultText, CommonStyles.largerText, { marginBottom: 5 }]} numberOfLines={1} textBreakStrategy='balanced'>
               {Helpers.reverseAuteurName(author.PSEUDO)}{(name != Helpers.reverseAuteurName(author.PSEUDO) && name != '') ? ' (' + name + ')' : null}
             </Text>
+            {author.NATIONALITE ?
+              <Text style={[CommonStyles.defaultText, CommonStyles.smallerText, { marginBottom: 5 }]}>
+                {Helpers.capitalizedWords(author.NATIONALITE)}
+              </Text> :
+              null}
             {author.DTE_NAIS || author.DTE_DECES ?
-              <Text style={[CommonStyles.defaultText, CommonStyles.smallerText, { marginBottom: 5}]}>
+              <Text style={[CommonStyles.defaultText, CommonStyles.smallerText, { marginBottom: 5 }]}>
                 {author.DTE_NAIS ? Helpers.dateToString(author.DTE_NAIS) : '?'} - {author.DTE_DECES ? Helpers.dateToString(author.DTE_DECES) : '?'}
               </Text> :
               null}
@@ -290,6 +295,17 @@ function AuteurScreen({ route, navigation }) {
           </View>
         </View>
       </CollapsableSection>
+
+      {author.COMMENT ? <CollapsableSection sectionName='Biographie' isCollapsed={true} style={{ marginTop: 0, marginBottom: 5 }} noAnimation={true} >
+        <View style={{maxHeight: Dimensions.get('window').height * 0.3 }}>
+          <ScrollView horizontal={false} style={{ flexGrow:0, width: '100%', marginTop: -3, marginBottom: -8 }}>
+          <Text style={[CommonStyles.defaultText, { marginBottom: 5 }]}>
+             {Helpers.removeHTMLTags(author.COMMENT)}
+          </Text>
+        </ScrollView>
+        </View>
+      </CollapsableSection> : null}
+
       {loading ? <SmallLoadingIndicator /> : null}
       {errortext ? (
         <Text style={CommonStyles.errorTextStyle}>
@@ -307,7 +323,7 @@ function AuteurScreen({ route, navigation }) {
         renderItem={renderAlbum}
         renderSectionHeader={({ section: { title, data } }) => (displayMode == 'series' ?
           <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'
-            onPress={()=>{onPressSerie(data[0].ID_SERIE)}}>{title}</Text> :
+            onPress={() => { onPressSerie(data[0].ID_SERIE) }}>{title}</Text> :
           <Text style={[CommonStyles.sectionStyle, CommonStyles.sectionTextStyle]} numberOfLines={1} textBreakStrategy='balanced'>
             {title}
           </Text>)}
