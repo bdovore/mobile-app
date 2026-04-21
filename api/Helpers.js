@@ -311,6 +311,8 @@ export function removeHTMLTags(text) {
     text = text.replace(/\n /, '\n');
     text = text.replace(/\n\s\n*/g, '\n');// remove multiple returns occurences
     text = text.replace(/so[uo]rce:/, 'Source :'); // remove trailing carriage returns
+    text = text.replace(/ +/gi, ' '); // remove multiple spaces occurences
+    text = text.replace(/\n /gi, '\n'); // remove space after carriage return
   }
   return text;
 }

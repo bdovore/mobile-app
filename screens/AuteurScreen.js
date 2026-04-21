@@ -27,7 +27,7 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Dimensions, SectionList, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, SectionList, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { ListItem } from 'react-native-elements';
 
 import { AlbumItem } from '../components/AlbumItem';
@@ -297,10 +297,12 @@ function AuteurScreen({ route, navigation }) {
       </CollapsableSection>
 
       {author.COMMENT ? <CollapsableSection sectionName='Biographie' isCollapsed={true} style={{ marginTop: 0, marginBottom: 5 }} noAnimation={true} >
-        <View style={{ flexDirection: 'row', marginTop: -3, marginBottom: -8 }}>
+        <View style={{maxHeight: Dimensions.get('window').height * 0.3 }}>
+          <ScrollView horizontal={false} style={{ flexGrow:0, width: '100%', marginTop: -3, marginBottom: -8 }}>
           <Text style={[CommonStyles.defaultText, { marginBottom: 5 }]}>
              {Helpers.removeHTMLTags(author.COMMENT)}
           </Text>
+        </ScrollView>
         </View>
       </CollapsableSection> : null}
 
