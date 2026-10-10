@@ -29,7 +29,7 @@
 import 'react-native-gesture-handler';
 
 import React, { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { Appearance, useColorScheme } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import SplashScreen from "react-native-splash-screen";
 import Toast from 'react-native-toast-message';
@@ -38,28 +38,34 @@ import { DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { rebuildSheet } from './styles/CommonStyles';
 import MainTab from './routes/MainTab';
 
+declare global {
+  var isDarkMode: boolean;
+  var ToastRef: any;
+}
 
-const App: () => Node = () => {
+const App = () => {
 
   useEffect(() => {
     SplashScreen.hide();
-  });
+  }, []);
 
   global.isDarkMode = useColorScheme() === 'dark';
   console.debug('Set dark mode to ' + global.isDarkMode);
   rebuildSheet();
 
-  /* TODO - Support dynamic theme change.
-  Appearance.addChangeListener(({ colorScheme }) => {
-    //global.isDarkMode = colorScheme === 'dark'; // We
-    rebuildSheet();
-    //console.debug("Appearance changed: " + colorScheme);
-  });*/
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      global.isDarkMode = colorScheme === 'dark';
+      rebuildSheet();
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   return (
     <NavigationContainer theme={global.isDarkMode ? DarkTheme : DefaultTheme}>
       <MainTab />
-      <Toast ref={(ref) => ToastRef = ref} />
+      <Toast ref={(ref) => global.ToastRef = ref} />
     </NavigationContainer>
   );
 };
