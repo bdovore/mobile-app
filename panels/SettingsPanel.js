@@ -26,8 +26,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Switch, Text, View } from 'react-native';
+import { Slider } from 'react-native-elements';
+import SettingsManager from '../api/SettingsManager';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { BottomSheet } from '../components/BottomSheet';
@@ -36,6 +38,19 @@ import * as Helpers from '../api/Helpers';
 
 
 function SettingsPanel({ isVisible, visibleSetter }) {
+
+  const [gridColumns, setGridColumns] = useState(() => SettingsManager.getAlbumGridColumns());
+
+  useEffect(() => {
+    if (isVisible) {
+      setGridColumns(SettingsManager.getAlbumGridColumns());
+    }
+  }, [isVisible]);
+
+  const onGridColumnsChanged = value => {
+    SettingsManager.setAlbumGridColumns(value);
+    setGridColumns(SettingsManager.getAlbumGridColumns());
+  };
 
   const [autoSync, setAutoSync] = useState(global.autoSync);
   const [confirmDeletion, setConfirmDeletion] = useState(global.confirmDeletion);
@@ -96,8 +111,26 @@ function SettingsPanel({ isVisible, visibleSetter }) {
 
         {Helpers.renderAnchor()}
 
+        <View style={{ flexDirection: 'row', alignItems: 'center', width: '80%', paddingVertical: 10, marginHorizontal: 10 }}>
+          <Text style={[CommonStyles.defaultText, { flexShrink: 1 }]}>Albums par ligne en grille : {gridColumns}</Text>
+          <Slider
+            style={{ flex: 1, minWidth: 80, marginLeft: 16 }}
+            value={gridColumns}
+            minimumValue={2}
+            maximumValue={8}
+            step={1}
+            onValueChange={onGridColumnsChanged}
+            minimumTrackTintColor={CommonStyles.switchStyle.backgroundColor}
+            maximumTrackTintColor={CommonStyles.switchStyle.borderColor}
+            thumbTintColor={CommonStyles.switchStyle.color}
+            thumbStyle={{ width: 24, height: 24 }}
+            thumbProps={{ accessibilityLabel: 'Nombre d’albums par ligne', accessibilityRole: 'adjustable', accessibilityValue: { min: 2, max: 8, now: gridColumns } }}
+          />
+        </View>
+
         <View style={{
-           flexDirection: 'row', flex: 1, width: '80%', paddingVertical: 10, marginHorizontal: 10, justifyContent: 'space-between' }}>
+           flexDirection: 'row', flex: 1, width: '80%', paddingVertical: 10, marginHorizontal: 10, justifyContent: 'space-between',
+           borderTopWidth: 1.0, borderTopColor: CommonStyles.separatorStyle.borderBottomColor }}>
           <Text style={CommonStyles.defaultText}>Images uniquement en Wifi</Text>
           <View style={{ flex: 1 }}></View>
           <Switch value={imageOnWifi} onValueChange={onSwitchImageOnWifi}
