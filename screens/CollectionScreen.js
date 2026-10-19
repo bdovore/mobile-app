@@ -85,7 +85,6 @@ const filterModesSeriesSearch = {
 }
 
 let cachedToken = '';
-let collectionGenre = 0;
 let loadingSteps = 0;
 let loadTime = 0;
 let loadedItems = 0;
@@ -106,15 +105,16 @@ function CollectionScreen({ route, navigation }) {
   const [showSerieFilterChooser, setShowSerieFilterChooser] = useState(false);
   const [showSortChooser, setShowSortChooser] = useState(false);
   const [sortMode, setSortMode] = useState(defaultSortMode);  // 0: Default, 1: Sort by date
-  const [toggleElement, setToggleElement] = useState(Date.now());
+  const [toggleElement, setToggleElement] = useState(0);
+  const applyFiltersRef = useRef();
   const flatList = useRef();
   const stateRefKeywords = useRef();
   stateRefKeywords.current = keywords;
 
-  collectionGenre = route.params.collectionGenre;
+  const collectionGenre = route.params.collectionGenre;
 
   const toggle = () => {
-    setToggleElement(Date.now());
+    setToggleElement(value => value + 1);
   }
 
   const refreshDataIfNeeded = (force = false) => {
@@ -141,7 +141,7 @@ function CollectionScreen({ route, navigation }) {
     // Make sure data is refreshed when login/token changed
     const willFocusSubscription = navigation.addListener('focus', () => {
       refreshDataIfNeeded();
-      applyFilters();
+      applyFiltersRef.current();
       toggle();
     });
     return willFocusSubscription;
@@ -158,7 +158,7 @@ function CollectionScreen({ route, navigation }) {
 
   useEffect(() => {
     applyFilters();
-  }, [collectionType, filterMode, serieFilterMode, sortMode, keywords]);
+  }, [collectionType, filterMode, serieFilterMode, sortMode, keywords, toggleElement]);
 
   const filterCollection = (collection, mode) => {
 
@@ -218,6 +218,9 @@ function CollectionScreen({ route, navigation }) {
     }
   }
 
+  // Long-lived navigation and fetch callbacks must use the current filter state.
+  applyFiltersRef.current = applyFilters;
+
   const fetchData = () => {
     if (!loading && global.isConnected) {
       setKeywords('');
@@ -248,12 +251,12 @@ function CollectionScreen({ route, navigation }) {
       case 0:
         let nbTotalSeries = result.totalItems ?? result.items.length;
         setProgressRate(loadedItems / (nbTotalSeries ?? 1));
-        applyFilters();
+        applyFiltersRef.current();
         break;
       case 1:
         let nbTotalAlbums = result.totalItems ?? result.items.length;
         setProgressRate(loadedItems / (nbTotalAlbums ?? 1));
-        applyFilters();
+        applyFiltersRef.current();
         break;
       case 2:
         break;
