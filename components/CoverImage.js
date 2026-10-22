@@ -71,7 +71,7 @@ export function CoverImage({ item, category, style, noResize, largeMode }) {
   const nodownload = !global.isConnected || (global.imageOnWifi && !SettingsManager.isWifiConnected());
 
   return (nodownload && Platform.OS == 'android' ?
-    <View style={{ width, height, backgroundColor: 'lightgrey' }}>
+    <View style={[{ width, height, backgroundColor: 'lightgrey' }, style]}>
       <Text style={[CommonStyles.defaultText, CommonStyles.evenSmallerText, { textAlign: 'center', height: '100%', textAlignVertical: 'center' }]}>
         <Icon name='MaterialIcons/image-not-supported' size={20} />{'\n'}
         Image{'\n'}non disponible{'\n'}hors {!global.isConnected ? 'connexion' : 'WiFi'}

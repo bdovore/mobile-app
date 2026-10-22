@@ -27,16 +27,18 @@
  */
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, RefreshControl, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { ButtonGroup } from 'react-native-elements';
 import { SearchBar } from 'react-native-elements';
 
+import { AlbumGridItem } from '../components/AlbumGridItem';
 import { AlbumItem } from '../components/AlbumItem';
 import { bdovored, bdovorlightred, AlbumItemHeight, CommonStyles, red } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as APIManager from '../api/APIManager'
 import * as Helpers from '../api/Helpers';
+import SettingsManager from '../api/SettingsManager';
 import CollectionManager from '../api/CollectionManager';
 
 
@@ -52,6 +54,12 @@ let timeout = [null, null];
 
 function NewsScreen({ route, navigation }) {
 
+  const { width: windowWidth } = useWindowDimensions();
+  const [listWidth, setListWidth] = useState(windowWidth - 1);
+  const [gridMode, setGridMode] = useState(false);
+  const [gridColumns, setGridColumns] = useState(() => SettingsManager.getAlbumGridColumns());
+  const numColumns = gridMode ? gridColumns : 1;
+
   const [ascendingSort, setAscendingSort] = useState(true);
   const [collectionGenre, setCollectionGenre] = useState(1);
   const [errortext, setErrortext] = useState('');
@@ -66,6 +74,8 @@ function NewsScreen({ route, navigation }) {
   const [trendAlbums, setTrendAlbums] = useState([]);
   const [userNewsAlbums, setUserNewsAlbums] = useState([]);
   const flatList = useRef();
+
+  useEffect(() => SettingsManager.subscribeToGridColumns(setGridColumns), []);
 
   if (route.params.collectionGenre != collectionGenre) {
     setCollectionGenre(route.params.collectionGenre);
@@ -219,8 +229,18 @@ function NewsScreen({ route, navigation }) {
     Helpers.isValid(item) &&
     <AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} showEditionDate={true} showExclude={true} />, []);
 
+  const renderGridAlbum = useCallback(({ item }) =>
+    Helpers.isValid(item) &&
+    <AlbumGridItem navigation={navigation} item={Helpers.toDict(item)} width={listWidth / gridColumns} showEditionDate />,
+    [navigation, listWidth, gridColumns]);
+
+  const togglePresentation = () => {
+    setGridMode(previous => !previous);
+    setScrollPos([40, 40, 40]);
+  };
+
   const keyExtractor = useCallback((item, index) =>
-    Helpers.isValid(item) ? Helpers.getAlbumUID(item) : index, []);
+    String(Helpers.isValid(item) ? Helpers.getAlbumUID(item) : index), []);
 
   const getItemLayout = useCallback((data, index) => ({
     length: AlbumItemHeight,
@@ -251,8 +271,15 @@ function NewsScreen({ route, navigation }) {
               </Text>
             </TouchableOpacity>
           </View> : null}
+        <TouchableOpacity
+          onPress={togglePresentation}
+          accessibilityRole='button'
+          accessibilityLabel={gridMode ? 'Afficher en liste' : 'Afficher en grille'}
+          style={{ width: 40, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Icon name={gridMode ? 'view-list' : 'view-grid-outline'} size={25} color={CommonStyles.iconStyle.color} />
+        </TouchableOpacity>
       </View>
-      <View style={{ flex: 1, marginLeft: 1 }}>
+      <View style={{ flex: 1, marginLeft: 1 }} onLayout={event => setListWidth(event.nativeEvent.layout.width)}>
         {errortext ? (
           <Text style={CommonStyles.errorTextStyle}>
             {errortext}
@@ -260,21 +287,23 @@ function NewsScreen({ route, navigation }) {
         ) : null}
         {global.isConnected ?
           <FlatList
+            key={`${gridMode ? 'grid' : 'list'}-${numColumns}`}
+            numColumns={numColumns}
             ref={flatList}
             initialNumToRender={6}
             maxToRenderPerBatch={10}
             windowSize={10}
-            ItemSeparatorComponent={Helpers.renderSeparator}
+            ItemSeparatorComponent={gridMode ? undefined : Helpers.renderSeparator}
             data={Helpers.filterAlbumsWithSearchKeywords(newsMode == 0 ? filteredUserNewsAlbums : newsMode == 1 ? trendAlbums : filteredForthcomingAlbums, keywords)}
             keyExtractor={keyExtractor}
-            renderItem={renderAlbum}
+            renderItem={gridMode ? renderGridAlbum : renderAlbum}
             extraData={toggleElement}
             refreshControl={<RefreshControl
               colors={[bdovorlightred, bdovored]}
               tintColor={bdovored}
               refreshing={loading}
               onRefresh={() => { fetchUserNewsData(); fetchNewsData(); }} />}
-            getItemLayout={getItemLayout}
+            getItemLayout={gridMode ? undefined : getItemLayout}
             onScroll={onScrollEvent}
             ListHeaderComponent={
               <SearchBar
