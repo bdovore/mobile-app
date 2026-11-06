@@ -32,6 +32,9 @@ import * as Progress from 'react-native-progress';
 import { ButtonGroup } from 'react-native-elements';
 import { SearchBar } from 'react-native-elements';
 
+import { AlbumGridItem } from '../components/AlbumGridItem';
+import { PresentationToggle } from '../components/PresentationToggle';
+import { useAlbumPresentation } from '../hooks/useAlbumPresentation';
 import { AlbumItem } from '../components/AlbumItem';
 import { bdovored, bdovorlightred, AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
@@ -51,6 +54,8 @@ let timeout = null;
 
 function ToCompleteScreen({ route, navigation }) {
 
+  const { gridMode, numColumns, itemWidth, listKey, onLayout, togglePresentation } = useAlbumPresentation();
+
   const [collectionType, setCollectionType] = useState(0); // 0: Series, 1: Albums
   const [errortext, setErrortext] = useState('');
   const [filteredAlbums, setFilteredAlbums] = useState([]);
@@ -60,6 +65,8 @@ function ToCompleteScreen({ route, navigation }) {
   const [progressRate, setProgressRate] = useState(0);
   const [scrollPos, setScrollPos] = useState([0, 0]);
   const flatList = useRef();
+
+  useEffect(() => { setScrollPos([0, 0]); }, [listKey]);
 
   let [cachedToken, setCachedToken] = useState('');
 
@@ -207,16 +214,18 @@ function ToCompleteScreen({ route, navigation }) {
   const renderItem = useCallback(({ item, index }) => {
     if (Helpers.isValid(item)) {
       switch (collectionType) {
-        case 0: return (<SerieItem navigation={navigation} item={Helpers.toDict(item)} index={index} showExclude={true} />);
-        case 1: return (<AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} showExclude={true} />);
+        case 0: return (<SerieItem navigation={navigation} item={Helpers.toDict(item)} index={index} showExclude={true} gridWidth={gridMode ? itemWidth : undefined} />);
+        case 1: return gridMode
+          ? <AlbumGridItem navigation={navigation} item={Helpers.toDict(item)} width={itemWidth} showExclude={true} />
+          : <AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} showExclude={true} />;
       }
     }
     return null;
-  }, [collectionType]);
+  }, [collectionType, gridMode, itemWidth, navigation]);
 
   const keyExtractor = useCallback((item, index) =>
-    Helpers.isValid(item) ?
-      (collectionType == 0 ? item.ID_SERIE : Helpers.getAlbumUID(item)) : index, [collectionType]);
+    String(Helpers.isValid(item) ?
+      (collectionType == 0 ? item.ID_SERIE : Helpers.getAlbumUID(item)) : index), [collectionType]);
 
   const getItemLayout = useCallback((data, index) => ({
     length: AlbumItemHeight,
@@ -225,7 +234,7 @@ function ToCompleteScreen({ route, navigation }) {
   }), []);
 
   return (
-    <View style={CommonStyles.screenStyle}>
+    <View style={CommonStyles.screenStyle} onLayout={onLayout}>
       <View style={{ flexDirection: 'row' }}>
         <ButtonGroup
           onPress={onPressCollectionType}
@@ -242,6 +251,7 @@ function ToCompleteScreen({ route, navigation }) {
           selectedButtonStyle={CommonStyles.buttonGroupSelectedButtonStyle}
           innerBorderStyle={CommonStyles.buttonGroupInnerBorderStyle}
         />
+        <PresentationToggle gridMode={gridMode} onPress={togglePresentation} />
         {(!global.autoSync && (!global.collectionManquantsUpdated || albums.length == 0)) ?
           <TouchableOpacity onPress={() => refreshDataIfNeeded(true)}><Icon name='refresh' size={25} style={{ marginTop: 6, marginRight: 10 }} /></TouchableOpacity> : null}
       </View>
@@ -266,6 +276,8 @@ function ToCompleteScreen({ route, navigation }) {
           </View>
           :
           <FlatList
+            key={`${collectionType}-${listKey}`}
+            numColumns={numColumns}
             ref={flatList}
             initialNumToRender={6}
             maxToRenderPerBatch={10}
@@ -275,8 +287,8 @@ function ToCompleteScreen({ route, navigation }) {
               Helpers.filterAlbumsWithSearchKeywords(filteredAlbums, keywords)}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
-            ItemSeparatorComponent={Helpers.renderSeparator}
-            getItemLayout={getItemLayout}
+            ItemSeparatorComponent={gridMode ? undefined : Helpers.renderSeparator}
+            getItemLayout={gridMode ? undefined : getItemLayout}
             refreshControl={<RefreshControl
               colors={[bdovorlightred, global.isDarkMode ? bdovorlightred : bdovored]}
               tintColor={global.isDarkMode ? bdovorlightred : bdovored}

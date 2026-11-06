@@ -39,6 +39,8 @@ let globs = [
   ['confirmDeletion',        true],
   ['explicitContent',        false],
   ['forceOffline',           false],
+  ['albumGridColumns',       2],
+  ['albumGridMode',          false],
   ['hideSponsoredLinks',     false],
   ['imageOnWifi',            false],
   ['localTimestamp',         null],
@@ -55,6 +57,51 @@ let globs = [
 ];
 
 class CSettingsManager {
+
+  gridColumnListeners = new Set();
+
+  gridModeListeners = new Set();
+
+  getAlbumGridMode() {
+    return global.albumGridMode === true || global.albumGridMode === '1';
+  }
+
+  subscribeToGridMode(listener) {
+    this.gridModeListeners.add(listener);
+    listener(this.getAlbumGridMode());
+    return () => this.gridModeListeners.delete(listener);
+  }
+
+  notifyGridMode() {
+    this.gridModeListeners.forEach(listener => listener(this.getAlbumGridMode()));
+  }
+
+  toggleAlbumGridMode() {
+    Helpers.setAndSaveGlobal('albumGridMode', !this.getAlbumGridMode());
+    this.notifyGridMode();
+  }
+
+  getAlbumGridColumns() {
+    const value = Number(global.albumGridColumns);
+    return Number.isFinite(value) ? Math.max(2, Math.min(8, Math.round(value))) : 2;
+  }
+
+  subscribeToGridColumns(listener) {
+    this.gridColumnListeners.add(listener);
+    listener(this.getAlbumGridColumns());
+    return () => this.gridColumnListeners.delete(listener);
+  }
+
+  notifyGridColumns() {
+    this.gridColumnListeners.forEach(listener => listener(this.getAlbumGridColumns()));
+  }
+
+  setAlbumGridColumns(value) {
+    global.albumGridColumns = value;
+    const columns = this.getAlbumGridColumns();
+    Helpers.setAndSaveGlobal('albumGridColumns', String(columns));
+    this.notifyGridColumns();
+  }
 
   constructor() {
     this.initialize();
@@ -92,6 +139,8 @@ class CSettingsManager {
       response.forEach((v) => {
         setKey(v[0], v[1]);
       });
+      this.notifyGridColumns();
+      this.notifyGridMode();
       global.settingsLoaded = true;
     }).catch(() => {
       global.settingsLoaded = true;

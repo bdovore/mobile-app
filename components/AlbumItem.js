@@ -37,7 +37,7 @@ import { RatingStars } from './RatingStars';
 import * as Helpers from '../api/Helpers';
 
 
-export function AlbumItem({ navigation, item, index, collectionMode, dontShowSerieScreen, showEditionDate = false, showExclude, refreshCallback }) {
+export function AlbumItem({ navigation, item, index, collectionMode, dontShowSerieScreen, showEditionDate = false, showExclude, showOwn = true, refreshCallback }) {
 
   const onPressAlbum = () => {
     navigation.push('Album', { item: Helpers.toDict(item), dontShowSerieScreen });
@@ -78,6 +78,7 @@ export function AlbumItem({ navigation, item, index, collectionMode, dontShowSer
       {collectionMode ? null :
         <AlbumMarkers item={item}
           style={[CommonStyles.markerAlbumItemStyle]}
+          showOwn={showOwn}
           reduceMode={true}
           showExclude={showExclude /*&& CollectionManager.getNbOfUserAlbumsInSerie(item.ID_SERIE) > 0 ? true : false*/}
           refreshCallback={refreshCallback} />

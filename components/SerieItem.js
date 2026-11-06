@@ -31,6 +31,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { CommonStyles, AlbumImageWidth } from '../styles/CommonStyles';
 import { CoverImage } from './CoverImage';
+import { CoverGridItem, CoverGridDetail } from './CoverGridItem';
 import { RatingStars } from './RatingStars';
 import { SerieMarkers } from './SerieMarkers';
 import * as APIManager from '../api/APIManager';
@@ -38,7 +39,7 @@ import * as Helpers from '../api/Helpers';
 import CollectionManager from '../api/CollectionManager';
 
 
-export function SerieItem({ navigation, item, index, collectionMode, showExclude }) {
+export function SerieItem({ navigation, item, index, collectionMode, showExclude, gridWidth }) {
 
   const onPressSerie = (navigation, item) => {
 
@@ -56,6 +57,18 @@ export function SerieItem({ navigation, item, index, collectionMode, showExclude
   }
 
   const nbUserAlbums = CollectionManager.getNbOfUserAlbumsInSerie(item.ID_SERIE);
+
+  if (gridWidth) {
+    return (
+      <CoverGridItem item={item} width={gridWidth} category={0} title={item.NOM_SERIE}
+        onPress={() => onPressSerie(navigation, item)}
+        actions={showExclude ? <SerieMarkers item={item} style={CommonStyles.markersViewStyle} reduceMode={true} showExclude={true} /> : null}>
+        <CoverGridDetail>{item.LIB_FLG_FINI_SERIE || ' '}</CoverGridDetail>
+        <CoverGridDetail>{Helpers.pluralWord(nbUserAlbums, 'album')}{item.NB_ALBUM > 0 ? ` sur ${item.NB_ALBUM}` : ''}</CoverGridDetail>
+        {!collectionMode ? <CoverGridDetail>{item.nb_album ? Helpers.pluralWord(item.nb_album, 'album') + ' ' + Helpers.pluralize(item.nb_album, 'manquant') : ' '}</CoverGridDetail> : null}
+      </CoverGridItem>
+    );
+  }
 
   return (
     <TouchableOpacity key={index} onPress={() => onPressSerie(navigation, item)}>

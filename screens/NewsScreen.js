@@ -31,6 +31,9 @@ import { FlatList, RefreshControl, Text, TouchableOpacity, View } from 'react-na
 import { ButtonGroup } from 'react-native-elements';
 import { SearchBar } from 'react-native-elements';
 
+import { AlbumGridItem } from '../components/AlbumGridItem';
+import { PresentationToggle } from '../components/PresentationToggle';
+import { useAlbumPresentation } from '../hooks/useAlbumPresentation';
 import { AlbumItem } from '../components/AlbumItem';
 import { bdovored, bdovorlightred, AlbumItemHeight, CommonStyles, red } from '../styles/CommonStyles';
 import { Icon } from '../components/Icon';
@@ -52,6 +55,8 @@ let timeout = [null, null];
 
 function NewsScreen({ route, navigation }) {
 
+  const { gridMode, numColumns, itemWidth, listKey, onLayout, togglePresentation } = useAlbumPresentation();
+
   const [ascendingSort, setAscendingSort] = useState(true);
   const [collectionGenre, setCollectionGenre] = useState(1);
   const [errortext, setErrortext] = useState('');
@@ -66,6 +71,8 @@ function NewsScreen({ route, navigation }) {
   const [trendAlbums, setTrendAlbums] = useState([]);
   const [userNewsAlbums, setUserNewsAlbums] = useState([]);
   const flatList = useRef();
+
+  useEffect(() => { setScrollPos([40, 40, 40]); }, [listKey]);
 
   if (route.params.collectionGenre != collectionGenre) {
     setCollectionGenre(route.params.collectionGenre);
@@ -217,10 +224,15 @@ function NewsScreen({ route, navigation }) {
 
   const renderAlbum = useCallback(({ item, index }) =>
     Helpers.isValid(item) &&
-    <AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} showEditionDate={true} showExclude={true} />, []);
+    <AlbumItem navigation={navigation} item={Helpers.toDict(item)} index={index} showEditionDate={true} showExclude={true} showOwn={newsMode != 2} />, [navigation, newsMode]);
+
+  const renderGridAlbum = useCallback(({ item }) =>
+    Helpers.isValid(item) &&
+    <AlbumGridItem navigation={navigation} item={Helpers.toDict(item)} width={itemWidth} showEditionDate showExclude actionsOnCover showOwn={newsMode != 2} />,
+    [navigation, itemWidth, newsMode]);
 
   const keyExtractor = useCallback((item, index) =>
-    Helpers.isValid(item) ? Helpers.getAlbumUID(item) : index, []);
+    String(Helpers.isValid(item) ? Helpers.getAlbumUID(item) : index), []);
 
   const getItemLayout = useCallback((data, index) => ({
     length: AlbumItemHeight,
@@ -251,8 +263,9 @@ function NewsScreen({ route, navigation }) {
               </Text>
             </TouchableOpacity>
           </View> : null}
+        <PresentationToggle gridMode={gridMode} onPress={togglePresentation} />
       </View>
-      <View style={{ flex: 1, marginLeft: 1 }}>
+      <View style={{ flex: 1, marginLeft: 1 }} onLayout={onLayout}>
         {errortext ? (
           <Text style={CommonStyles.errorTextStyle}>
             {errortext}
@@ -260,21 +273,23 @@ function NewsScreen({ route, navigation }) {
         ) : null}
         {global.isConnected ?
           <FlatList
+            key={listKey}
+            numColumns={numColumns}
             ref={flatList}
             initialNumToRender={6}
             maxToRenderPerBatch={10}
             windowSize={10}
-            ItemSeparatorComponent={Helpers.renderSeparator}
+            ItemSeparatorComponent={gridMode ? undefined : Helpers.renderSeparator}
             data={Helpers.filterAlbumsWithSearchKeywords(newsMode == 0 ? filteredUserNewsAlbums : newsMode == 1 ? trendAlbums : filteredForthcomingAlbums, keywords)}
             keyExtractor={keyExtractor}
-            renderItem={renderAlbum}
+            renderItem={gridMode ? renderGridAlbum : renderAlbum}
             extraData={toggleElement}
             refreshControl={<RefreshControl
               colors={[bdovorlightred, bdovored]}
               tintColor={bdovored}
               refreshing={loading}
               onRefresh={() => { fetchUserNewsData(); fetchNewsData(); }} />}
-            getItemLayout={getItemLayout}
+            getItemLayout={gridMode ? undefined : getItemLayout}
             onScroll={onScrollEvent}
             ListHeaderComponent={
               <SearchBar
