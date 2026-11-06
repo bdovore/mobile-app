@@ -40,6 +40,7 @@ let globs = [
   ['explicitContent',        false],
   ['forceOffline',           false],
   ['albumGridColumns',       2],
+  ['albumGridMode',          false],
   ['hideSponsoredLinks',     false],
   ['imageOnWifi',            false],
   ['localTimestamp',         null],
@@ -58,6 +59,27 @@ let globs = [
 class CSettingsManager {
 
   gridColumnListeners = new Set();
+
+  gridModeListeners = new Set();
+
+  getAlbumGridMode() {
+    return global.albumGridMode === true || global.albumGridMode === '1';
+  }
+
+  subscribeToGridMode(listener) {
+    this.gridModeListeners.add(listener);
+    listener(this.getAlbumGridMode());
+    return () => this.gridModeListeners.delete(listener);
+  }
+
+  notifyGridMode() {
+    this.gridModeListeners.forEach(listener => listener(this.getAlbumGridMode()));
+  }
+
+  toggleAlbumGridMode() {
+    Helpers.setAndSaveGlobal('albumGridMode', !this.getAlbumGridMode());
+    this.notifyGridMode();
+  }
 
   getAlbumGridColumns() {
     const value = Number(global.albumGridColumns);
@@ -118,6 +140,7 @@ class CSettingsManager {
         setKey(v[0], v[1]);
       });
       this.notifyGridColumns();
+      this.notifyGridMode();
       global.settingsLoaded = true;
     }).catch(() => {
       global.settingsLoaded = true;

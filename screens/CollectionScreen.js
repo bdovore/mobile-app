@@ -32,6 +32,9 @@ import { ButtonGroup, ListItem, SearchBar } from 'react-native-elements';
 import * as Progress from 'react-native-progress';
 import { format } from 'react-string-format';
 
+import { PresentationToggle } from '../components/PresentationToggle';
+import { useAlbumPresentation } from '../hooks/useAlbumPresentation';
+import { AlbumGridItem } from '../components/AlbumGridItem';
 import { AlbumItem } from '../components/AlbumItem';
 import { bdovored, bdovorlightred, AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
 import { BottomSheet } from '../components/BottomSheet';
@@ -90,6 +93,8 @@ let loadTime = 0;
 let loadedItems = 0;
 
 function CollectionScreen({ route, navigation }) {
+
+  const { gridMode, numColumns, itemWidth, listKey, onLayout, togglePresentation } = useAlbumPresentation();
 
   const [collectionType, setCollectionType] = useState(0); // 0: Series, 1: Albums
   const [errortext, setErrortext] = useState('');
@@ -159,6 +164,8 @@ function CollectionScreen({ route, navigation }) {
   useEffect(() => {
     applyFilters();
   }, [collectionType, filterMode, serieFilterMode, sortMode, keywords, toggleElement]);
+
+  useEffect(() => { setScrollPos([40, 40]); }, [listKey]);
 
   const filterCollection = (collection, mode) => {
 
@@ -312,8 +319,16 @@ function CollectionScreen({ route, navigation }) {
     return null;
   }, [collectionType]);
 
+  const renderGridItem = useCallback(({ item, index }) => {
+    if (!Helpers.isValid(item)) return null;
+    const props = { navigation, item: Helpers.toDict(item) };
+    return collectionType == 0
+      ? <SerieItem {...props} index={index} collectionMode={true} gridWidth={itemWidth} />
+      : <AlbumGridItem {...props} width={itemWidth} />;
+  }, [collectionType, navigation, itemWidth]);
+
   const keyExtractor = useCallback((item, index) =>
-    Helpers.isValid(item) ? (collectionType == 0 ? parseInt(item.ID_SERIE) : Helpers.makeAlbumUID(item)) : index,
+    String(Helpers.isValid(item) ? (collectionType == 0 ? parseInt(item.ID_SERIE) : Helpers.makeAlbumUID(item)) : index),
     [collectionType]);
 
   const getItemLayout = useCallback((data, index) => ({
@@ -347,6 +362,7 @@ function CollectionScreen({ route, navigation }) {
           selectedButtonStyle={CommonStyles.buttonGroupSelectedButtonStyle}
           innerBorderStyle={CommonStyles.buttonGroupInnerBorderStyle}
         />
+        <PresentationToggle gridMode={gridMode} onPress={togglePresentation} />
         {(!global.autoSync && global.serverTimestamp != global.localTimestamp) ?
           <TouchableOpacity onPress={() => refreshDataIfNeeded(true)}>
             <Icon name='refresh' size={25} style={{ marginTop: 6, marginRight: 10 }} />
@@ -384,23 +400,25 @@ function CollectionScreen({ route, navigation }) {
           <View style={{ flex: 1 }}></View>
         </View>
         :
-        <View style={{ flex: 1, marginTop: 0 }}>
+        <View style={{ flex: 1, marginTop: 0 }} onLayout={onLayout}>
           {errortext ? (
             <Text style={CommonStyles.errorTextStyle}>
               {errortext}
             </Text>
           ) : null}
           {<FlatList
+            key={`${collectionType}-${listKey}`}
+            numColumns={numColumns}
             ref={flatList}
             initialNumToRender={6}
             maxToRenderPerBatch={10}
             windowSize={10}
             data={(collectionType == 0 ? (filteredSeries ? filteredSeries : CollectionManager.getSeries()) : (filteredAlbums ? filteredAlbums : CollectionManager.getAlbums()))}
             keyExtractor={keyExtractor}
-            renderItem={renderItem}
+            renderItem={gridMode ? renderGridItem : renderItem}
             extraData={toggleElement}
-            ItemSeparatorComponent={Helpers.renderSeparator}
-            getItemLayout={getItemLayout}
+            ItemSeparatorComponent={gridMode ? undefined : Helpers.renderSeparator}
+            getItemLayout={gridMode ? undefined : getItemLayout}
             refreshControl={<RefreshControl
               colors={[bdovorlightred, global.isDarkMode ? bdovorlightred : bdovored]}
               tintColor={global.isDarkMode ? bdovorlightred : bdovored}

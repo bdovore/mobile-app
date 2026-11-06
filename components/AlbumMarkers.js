@@ -61,7 +61,7 @@ const pBits = {
   'excluded': 256,
 };
 
-export function AlbumMarkers({ item, style, reduceMode = true, retractableButtons = true, showExclude, refreshCallback = () => { }, expandCallback = (expanded) => { } }) {
+export function AlbumMarkers({ item, style, reduceMode = true, retractableButtons = true, showExclude, showOwn = true, markerBackgroundColor, refreshCallback = () => { }, expandCallback = (expanded) => { } }) {
 
   const [album, setAlbum] = useState(item);
   const [initAlbum, setInitAlbum] = useState({});
@@ -330,7 +330,7 @@ export function AlbumMarkers({ item, style, reduceMode = true, retractableButton
 
   const MarkerLoadingIndicator = () => (
     <View style={[CommonStyles.markerStyle]}>
-      <ActivityIndicator size="small" color={global.isDarkMode ? bdovorlightred : bdovored} style={CommonStyles.markerIconStyle} />
+      <ActivityIndicator size="small" color={global.isDarkMode ? bdovorlightred : bdovored} style={[CommonStyles.markerIconStyle, markerBackgroundColor ? { backgroundColor: markerBackgroundColor } : null]} />
       <Text style={CommonStyles.markerTextStyle}>{' '}</Text>
     </View>);
 
@@ -340,7 +340,7 @@ export function AlbumMarkers({ item, style, reduceMode = true, retractableButton
         <TouchableOpacity onPress={onPressCb} title={text} style={CommonStyles.markerStyle}>
           <Icon name={isCheckedCb() ? iconEnabled : iconDisabled} size={25}
             color={isCheckedCb() ? enabledColor.color : CommonStyles.markIconDisabled.color}
-            style={[CommonStyles.markerIconStyle, isCheckedCb() ? iconStyle : null]} />
+            style={[CommonStyles.markerIconStyle, markerBackgroundColor ? { backgroundColor: markerBackgroundColor } : null, isCheckedCb() ? iconStyle : null]} />
           <Text style={[CommonStyles.markerTextStyle, isCheckedCb() ?
             enabledColor : CommonStyles.markIconDisabled]}>{text}</Text>
         </TouchableOpacity>);
@@ -371,7 +371,7 @@ export function AlbumMarkers({ item, style, reduceMode = true, retractableButton
       <ScrollView horizontal={true} showsHorizontalScrollIndicator={false} style={{ alignSelf: 'center' }} contentContainerStyle={{}} >
         <View style={[{ flexDirection: 'row', justifyContent: 'center' }]}>
 
-          {(isAlbumInCollection || album.FLG_ACHAT) || (!global.retractableButtons || (global.retractableButtons && showMore)) || !reduceMode ?
+          {showOwn && ((isAlbumInCollection || album.FLG_ACHAT) || (!global.retractableButtons || (global.retractableButtons && showMore)) || !reduceMode) ?
             <Marker name='own' iconEnabled='check-bold' iconDisabled='check' text="J'ai" onPressCb={onGotIt}
               isCheckedCb={() => isAlbumInCollection} /> : null}
 
