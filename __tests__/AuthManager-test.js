@@ -160,6 +160,17 @@ it('stocke uniquement le jeton et le profil dans le trousseau après connexion',
   expect(storage.values.has('passwd')).toBe(false);
   expect(storage.values.has('token')).toBe(false);
 });
+
+it('transmet le pseudo de précision en conservant le pseudo canonique du compte', async () => {
+  fetch.mockResolvedValue(reply(result()));
+  await auth.login('shared@example.test', 'secret', undefined, 'tom');
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+    username: 'shared@example.test',
+    pseudo: 'tom',
+  });
+  expect(auth.getUser().username).toBe('tom');
+  expect(global.login).toBe('tom');
+});
 it('conserve le cache lors de la reconnexion au même compte', async () => {
   storage.values.set('collectionOwnerId', '7');
   storage.values.set('login', 'tom');

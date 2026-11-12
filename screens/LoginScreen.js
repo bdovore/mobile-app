@@ -47,6 +47,8 @@ function LoginScreen({navigation}) {
   const [connected, setConnected] = useState(false);
   const [mode, setMode] = useState('login');
   const [username, setUsername] = useState('');
+  const [loginNeedsPseudo, setLoginNeedsPseudo] = useState(false);
+  const [accountPseudo, setAccountPseudo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
   const [email, setEmail] = useState('');
@@ -81,6 +83,8 @@ function LoginScreen({navigation}) {
       ? navigation.goBack()
       : navigation.navigate('CoreTab');
   const changeMode = (next, nextMessage = '') => {
+    setLoginNeedsPseudo(false);
+    setAccountPseudo('');
     setMode(next);
     setError('');
     setMessage(nextMessage);
@@ -98,6 +102,9 @@ function LoginScreen({navigation}) {
     try {
       await action();
     } catch (err) {
+      if (err.code === 'pseudo_required') {
+        setLoginNeedsPseudo(true);
+      }
       setError(err.message);
     } finally {
       setBusy(false);
@@ -116,14 +123,19 @@ function LoginScreen({navigation}) {
           'La connexion nécessite Internet. Vous pouvez consulter votre collection hors ligne.',
         );
       }
-      await AuthManager.login(username.trim(), password, async () => {
-        if (!global.db) {
-          throw new Error(
-            'La collection locale est en cours d’ouverture. Réessayez.',
-          );
-        }
-        CollectionManager.clearDatabase();
-      });
+      await AuthManager.login(
+        username.trim(),
+        password,
+        async () => {
+          if (!global.db) {
+            throw new Error(
+              'La collection locale est en cours d’ouverture. Réessayez.',
+            );
+          }
+          CollectionManager.clearDatabase();
+        },
+        accountPseudo.trim(),
+      );
       global.isConnected = true;
       APIManager.fetchSponsors(result => {
         if (!result.error) {
@@ -212,10 +224,24 @@ function LoginScreen({navigation}) {
       onClose={close}>
       {['login', 'register', 'forgot'].includes(mode) ? (
         <AccountField
-          label="Pseudo"
+          label={mode === 'login' ? 'Pseudo ou e-mail' : 'Pseudo'}
           value={username}
-          onChangeText={setUsername}
+          onChangeText={value => {
+            setUsername(value);
+            if (mode === 'login') {
+              setLoginNeedsPseudo(false);
+              setAccountPseudo('');
+            }
+          }}
           autoComplete="username"
+        />
+      ) : null}
+      {mode === 'login' && loginNeedsPseudo ? (
+        <AccountField
+          label="Pseudo de la collection"
+          value={accountPseudo}
+          onChangeText={setAccountPseudo}
+          autoComplete="off"
         />
       ) : null}
       {['register', 'forgot'].includes(mode) ? (

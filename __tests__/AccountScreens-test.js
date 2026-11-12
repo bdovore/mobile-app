@@ -121,10 +121,34 @@ it('connexion impossible hors ligne sans fabriquer de faux jeton', async () => {
   await act(async () => {
     tree = renderer.create(<LoginScreen navigation={navigation} />);
   });
-  await type('Pseudo', 'tom');
+  await type('Pseudo ou e-mail', 'tom');
   await type('Mot de passe', 'secret');
   await press('Se connecter');
   expect(Auth.login).not.toHaveBeenCalled();
+});
+
+it('demande le pseudo lorsque le backend ne peut identifier le compte par e-mail', async () => {
+  Auth.login.mockRejectedValueOnce(
+    Object.assign(new Error('Précisez votre pseudo.'), {
+      code: 'pseudo_required',
+    }),
+  );
+  await act(async () => {
+    tree = renderer.create(<LoginScreen navigation={navigation} />);
+  });
+  await type('Pseudo ou e-mail', 'shared@example.test');
+  await type('Mot de passe', 'mot de passe');
+  await press('Se connecter');
+  expect(field('Pseudo de la collection')).toBeDefined();
+  await type('Pseudo de la collection', 'collection-two');
+  Auth.login.mockResolvedValueOnce({});
+  await press('Se connecter');
+  expect(Auth.login).toHaveBeenLastCalledWith(
+    'shared@example.test',
+    'mot de passe',
+    expect.any(Function),
+    'collection-two',
+  );
 });
 it('profil hors ligne en lecture seule avec valeurs mises en cache', async () => {
   NetInfo.fetch.mockResolvedValue({isConnected: false});

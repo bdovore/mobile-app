@@ -20,6 +20,7 @@ Le projet possède un conflit de peer dependencies préexistant entre les versio
 
 - Le menu de connexion existant affiche le profil natif quand une session est présente.
 - Inscription, connexion, confirmation, récupération et modifications de compte sont natives.
+- La connexion accepte un pseudo ou un e-mail. Une adresse partagée demande le pseudo de la collection ; le vrai pseudo reste celui conservé dans l'app.
 - Les appels métier existants utilisent le Bearer. Aucun jeton de session n'est transmis dans une URL, même pour ouvrir les contributions web.
 - La première ouverture efface les anciens secrets AsyncStorage et demande une reconnexion, en conservant les données de collection du même compte.
 - L'identité de la collection locale est stockée séparément du jeton. Un changement de compte nettoie ce cache avant d'activer la nouvelle session.
@@ -38,6 +39,8 @@ npx eslint api/AuthManager.js api/Config.js components/AccountForm.js screens/Lo
 Le fichier de configuration Jest est explicite parce que le dépôt possède aussi une configuration dans `package.json`.
 
 Le test général préexistant `App-test.js` échoue à charger `RNGestureHandlerModule` dans Jest, dès le premier import d'`App.tsx` (inchangé). Les tests ciblés de l'authentification et des écrans sont exécutés séparément ; ils ne nécessitent pas de module natif réel.
+
+Google/Apple sont ajoutés au site dans ce lot, pas aux écrans natifs. Un membre créé via ces fournisseurs peut définir un mot de passe BDovore depuis son profil web après une connexion sociale récente, puis utiliser l'app. La configuration serveur est décrite dans `docs/connexion-google-apple.md` du dépôt PHP.
 
 Compilations locales sans publication ni signature de distribution :
 

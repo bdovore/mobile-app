@@ -208,11 +208,16 @@ export async function request(
   }
 }
 
-export async function login(username, password, onAccountChange) {
+export async function login(username, password, onAccountChange, pseudo = '') {
   await initialize();
   const started = generation;
   const result = await request('/apiauth/login', {
-    body: {username, password, device_name: 'BDovore ' + Platform.OS},
+    body: {
+      username,
+      password,
+      device_name: 'BDovore ' + Platform.OS,
+      ...(pseudo ? {pseudo} : {}),
+    },
   });
   if (started !== generation) {
     throw new AccountError('La session a changé.', 'session_changed');
