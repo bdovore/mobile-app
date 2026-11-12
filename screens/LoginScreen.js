@@ -26,338 +26,303 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Image, Linking, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { InAppBrowser } from 'react-native-inappbrowser-reborn';
-import NetInfo from "@react-native-community/netinfo";
-
-import { CommonStyles } from '../styles/CommonStyles';
-import { SmallLoadingIndicator } from '../components/SmallLoadingIndicator';
+import React, {useEffect, useState} from 'react';
+import {Text} from 'react-native';
+import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as AuthManager from '../api/AuthManager';
 import * as APIManager from '../api/APIManager';
-import * as Helpers from '../api/Helpers';
 import CollectionManager from '../api/CollectionManager';
+import ProfileScreen from './ProfileScreen';
+import {
+  AccountButton,
+  AccountField,
+  AccountPage,
+  passwordHelp,
+} from '../components/AccountForm';
+import {CommonStyles} from '../styles/CommonStyles';
 
-
-function LoginScreen({ navigation }) {
-
-  const isOfflineToken = (token) => {
-    return typeof token == 'string' && token.startsWith('offline-');
-  }
-
-  const hasValidSession = () => {
-    const hasOnlineToken = Boolean(APIManager.isValidToken());
-    const hasOfflineSession = global.forceOffline === true && isOfflineToken(global.token);
-    const hasLogin = typeof global.login == 'string' && global.login.trim().length > 0;
-    return hasLogin && (hasOnlineToken || hasOfflineSession);
-  }
-
-  const [errortext, setErrortext] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [passwd, setPasswd] = useState('');
-  const [pseudo, setPseudo] = useState('');
-  const [isConnected, setIsConnected] = useState(hasValidSession());
-  const passwdInputRef = useRef();
-
+function LoginScreen({navigation}) {
+  const [ready, setReady] = useState(false);
+  const [connected, setConnected] = useState(false);
+  const [mode, setMode] = useState('login');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmation, setConfirmation] = useState('');
+  const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
+  const [challenge, setChallenge] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   useEffect(() => {
-    const refreshState = () => {
-      setPseudo(global.login ?? '');
-      setPasswd(global.passwd ?? '');
-      setIsConnected(hasValidSession());
-    };
-
-    refreshState();
-    const unsubscribe = navigation.addListener('focus', refreshState);
-
-    return unsubscribe;
-  }, [navigation]);
-
-  const resetDatabaseForNewLogin = () => {
-    if (pseudo != global.login) {
-      console.debug('User changed - resetting the database');
-      CollectionManager.resetDatabase();
-    }
-  }
-
-  const onLoginPress = () => {
-    if (!pseudo) {
-      setErrortext('Veuillez renseigner le pseudo.');
-      return;
-    }
-    if (!passwd) {
-      setErrortext('Veuillez renseigner le mot de passe.');
-      return;
-    }
-
-    setErrortext('');
-    setLoading(true);
-    global.forceOffline = false;
-
-    NetInfo.fetch().then(state => {
-      global.isConnected = state.isConnected;
-      if (global.isConnected) {
-        APIManager.loginBDovore(pseudo, passwd, onConnected);
-      } else {
-        global.forceOffline = true;
-        Helpers.showToast(false, "Utilisation en mode off-line.", "Connexion Internet désactivée.")
-        onConnected({ error: '', token: 'offline-' + Date.now() });
-      }
-    });
-  }
-
-  const onOfflinePress = () => {
-    setLoading(true);
-    global.forceOffline = true;
-    global.isConnected = false;
-    resetDatabaseForNewLogin();
-    console.debug('Utilisation forcée en mode off - line.');
-    Helpers.showToast(false, 'Utilisation forcée en mode off-line.', 'Connexion au serveur désactivée.')
-    onConnected({ error: '', token: 'offline-' + Date.now() });
-  }
-
-  const onOnlinePress = () => {
-    global.forceOffline = false;
-
-    if (pseudo && passwd) {
-      onLoginPress();
-      return;
-    }
-
-    Helpers.setAndSaveGlobal('token', null);
-    setIsConnected(false);
-    setErrortext('Mode connecté activé. Veuillez vous reconnecter.');
-  }
-
-  const onConnected = (data) => {
-    setLoading(false);
-    setErrortext(data.error);
-
-    if (data.error == '') {
-      resetDatabaseForNewLogin();
-      Helpers.setAndSaveGlobal('token', data.token);
-      Helpers.setAndSaveGlobal('login', pseudo);
-      Helpers.setAndSaveGlobal('passwd', passwd);
-      const connected = hasValidSession();
-      setIsConnected(connected);
-      if (connected) {
-        navigation.goBack();
-      } else {
-        setErrortext('Session invalide. Veuillez vous reconnecter.');
-      }
-    }
-    else {
-      console.debug('error on connection: ' + data.error);
-    }
-  }
-
-  const onRegister = async () => {
-    try {
-      const url = APIManager.bdovoreBaseURL + '/compte/inscription';
-      if (await InAppBrowser.isAvailable()) {
-        const result = await InAppBrowser.open(url, {
-          // iOS Properties
-          dismissButtonStyle: 'Cancel',
-          preferredBarTintColor: '#FFFFFF',
-          preferredControlTintColor: 'blue',
-          readerMode: false,
-          animated: true,
-          modalPresentationStyle: 'fullScreen',
-          modalTransitionStyle: 'coverVertical',
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          // Android Properties
-          showTitle: false,
-          toolbarColor: 'white',
-          secondaryToolbarColor: 'black',
-          navigationBarColor: 'black',
-          navigationBarDividerColor: 'blue',
-          enableUrlBarHiding: true,
-          enableDefaultShare: false,
-          forceCloseOnRedirection: false,
-          // Specify full animation resource identifier(package:anim/name)
-          // or only resource name(in case of animation bundled with app).
-          animations: {
-            startEnter: 'slide_in_right',
-            startExit: 'slide_out_left',
-            endEnter: 'slide_in_left',
-            endExit: 'slide_out_right'
-          },
-          headers: {
-            'my-custom-header': 'Créer mon compte'
-          }
-        })
-        //console.debug(JSON.stringify(result));
-      }
-      else {
-        Linking.openURL(url);
-      }
-    } catch (error) {
-      Helpers.showToast(true, error.message);
-    }
-  }
-  const onEditAccount = async () => {
-    try {
-      const url = APIManager.bdovoreBaseURL + '/compte';
-      if (await InAppBrowser.isAvailable()) {
-        const result = await InAppBrowser.open(url, {
-          // iOS Properties
-          dismissButtonStyle: 'Cancel',
-          preferredBarTintColor: '#FFFFFF',
-          preferredControlTintColor: 'blue',
-          readerMode: false,
-          animated: true,
-          modalPresentationStyle: 'fullScreen',
-          modalTransitionStyle: 'coverVertical',
-          modalEnabled: true,
-          enableBarCollapsing: false,
-          // Android Properties
-          showTitle: false,
-          toolbarColor: 'white',
-          secondaryToolbarColor: 'black',
-          navigationBarColor: 'black',
-          navigationBarDividerColor: 'blue',
-          enableUrlBarHiding: true,
-          enableDefaultShare: false,
-          forceCloseOnRedirection: false,
-          // Specify full animation resource identifier(package:anim/name)
-          // or only resource name(in case of animation bundled with app).
-          animations: {
-            startEnter: 'slide_in_right',
-            startExit: 'slide_out_left',
-            endEnter: 'slide_in_left',
-            endExit: 'slide_out_right'
-          },
-          headers: {
-            'my-custom-header': 'Gérer mon compte'
-          }
-        })
-        //console.debug(JSON.stringify(result));
-      }
-      else {
-        Linking.openURL(url);
-      }
-    } catch (error) {
-      Helpers.showToast(true, error.message);
-    }
-  }
-
-  const onDisconnetPress = () => {
-
-    global.forceOffline = false;
-    global.isConnected = false;
-
-    console.debug('Deconnexion user.');
-    Helpers.showToast(false, 'Vous êtes déconnecté', 'Veuillez vous connecter de nouveau.')
-    Helpers.setAndSaveGlobal('token', null);
-    Helpers.setAndSaveGlobal('login', null);
-    Helpers.setAndSaveGlobal('passwd', null);
-
-    setPseudo('');
-    setPasswd('');
-    setIsConnected(false);
-  }
-
-  return (
-    <View style={[CommonStyles.screenStyle]}>
-      <ScrollView>
-        <View style={{ marginTop: 20, alignItems: 'center', marginBottom: 100, backgroundColor: 'rgba(0, 0, 0, 0.0)' }}>
-          <Image source={require('../assets/bdo_fond.jpg')} resizeMode='cover' style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.6 }} />
-          <Image source={require('../assets/logo_v2.png')} resizeMode='cover' style={{ top: 80, height: 160, width:320,  }}/>
-        </View>
-        {isConnected ?
-        <View>
-          <View style={{height: 20}}></View>
-          <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Vous êtes connecté en tant que {global.login}</Text>
-          <Text onPress={onDisconnetPress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Se déconnecter</Text>
-          <View>
-
-
-            <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Vous pouvez mettre à jour vos préférences ou supprimer votre compte Bdovore en vous connectant sur Bdovore.com</Text>
-
-            <TouchableOpacity
-              style={CommonStyles.loginConnectionButtonStyle}
-              onPress={onEditAccount}
-              title='Gérer mon compte'>
-              <Text style={CommonStyles.loginConnectionTextStyle}>Gérer mon compte</Text>
-            </TouchableOpacity>
-            <View style={{height: 20}}></View>
-
-            {global.forceOffline ?
-              <Text onPress={onOnlinePress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Mode connecté</Text>
-              : <Text onPress={onOfflinePress} style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>Mode hors ligne</Text>
-            }
-            <View style={{height: 100}}></View>
-            <TouchableOpacity
-              style={{backgroundColor: "lightgray", alignItems: 'center'}}
-              onPress={() => navigation.goBack()}
-              title='Fermer'>
-              <Text style={CommonStyles.loginConnectionTextStyle}>Fermer</Text>
-            </TouchableOpacity>
-
-          </View>
-        </View>
-
-        : (
-        <><Text style={[CommonStyles.defaultText, { marginTop: 0, marginBottom: 15, textAlign: 'center' }]}>Connectez vous avec votre compte BDovore</Text><Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Login</Text><TextInput
-              style={[CommonStyles.SectionStyle, CommonStyles.loginInputTextStyle]}
-              placeholder='Entrez votre login'
-              autoCapitalize='none'
-              returnKeyType='next'
-              blurOnSubmit={false}
-              value={pseudo}
-              textContentType='username' // iOS
-              autoCompleteType='username' // Android
-              onChangeText={(pseudo) => setPseudo(pseudo)}
-              onSubmitEditing={() => { passwdInputRef.current.focus(); } }
-              //blurOnSubmit={false}
-              testID='login' /><Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Mot de passe</Text><TextInput
-                style={[CommonStyles.SectionStyle, CommonStyles.loginInputTextStyle]}
-                ref={passwdInputRef}
-                placeholder='Entrez votre mot de passe'
-                secureTextEntry={true}
-                value={passwd}
-                autoCapitalize='none'
-                returnKeyType='go'
-                textContentType='password' // iOS
-                autoCompleteType='password' // Android
-                onChangeText={(passwd) => setPasswd(passwd)}
-                onSubmitEditing={onLoginPress}
-                blurOnSubmit={false}
-                testID='password' />
-
-        {errortext ? (
-          <Text style={CommonStyles.errorTextStyle}>
-            {errortext}
-          </Text>
-        ) : null}
-
-        {loading ?
-          <SmallLoadingIndicator style={{
-            flexDirection: 'row',
-            justifyContent: 'space-around',
-            padding: 10
-          }} /> :
-          <View>
-            <TouchableOpacity
-              style={CommonStyles.loginConnectionButtonStyle}
-              onPress={onLoginPress}
-              title='Login'>
-              <Text style={CommonStyles.loginConnectionTextStyle}>Se connecter</Text>
-            </TouchableOpacity>
-            </View>
+    let active = true;
+    AuthManager.initialize()
+      .then(() => {
+        if (!active) {
+          return;
         }
-        <View>
-
-            <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Vous n'avez pas encore de compte ?</Text>
-            <Text style={[CommonStyles.defaultText, { textAlign: 'center' }]}>Rendez-vous sur <Text style={CommonStyles.linkText} onPress={() => Linking.openURL('https://bdovore.com')}>bdovore.com</Text> pour en créer un gratuitement.</Text>
-            <Text style={[CommonStyles.linkText, { marginTop: 10, textAlign: 'center' }]} onPress={onRegister}>Créer mon compte</Text>
-
-          </View>
-        </>)}
-
-        <View style={{height: 20}}></View>
-      </ScrollView>
-    </View>
+        setUsername(global.collectionOwnerLogin ?? '');
+        setConnected(AuthManager.hasSession());
+        setReady(true);
+      })
+      .catch(err => {
+        if (active) {
+          setError(err.message);
+          setReady(true);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const close = () =>
+    navigation.canGoBack()
+      ? navigation.goBack()
+      : navigation.navigate('CoreTab');
+  const changeMode = (next, nextMessage = '') => {
+    setMode(next);
+    setError('');
+    setMessage(nextMessage);
+    setPassword('');
+    setConfirmation('');
+    setCode('');
+  };
+  const execute = async action => {
+    if (busy) {
+      return;
+    }
+    setBusy(true);
+    setError('');
+    setMessage('');
+    try {
+      await action();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const requireMatchingPassword = () => {
+    if (!password || password !== confirmation) {
+      throw new Error('Les mots de passe ne correspondent pas.');
+    }
+  };
+  const signIn = () =>
+    execute(async () => {
+      const network = await NetInfo.fetch();
+      if (!network.isConnected) {
+        throw new Error(
+          'La connexion nécessite Internet. Vous pouvez consulter votre collection hors ligne.',
+        );
+      }
+      await AuthManager.login(username.trim(), password, async () => {
+        if (!global.db) {
+          throw new Error(
+            'La collection locale est en cours d’ouverture. Réessayez.',
+          );
+        }
+        CollectionManager.clearDatabase();
+      });
+      global.isConnected = true;
+      APIManager.fetchSponsors(result => {
+        if (!result.error) {
+          global.sponsorsList = JSON.stringify(result.items);
+          AsyncStorage.setItem('sponsorsList', global.sponsorsList).catch(
+            () => {},
+          );
+        }
+      });
+      setPassword('');
+      setConnected(true);
+      close();
+    });
+  const register = () =>
+    execute(async () => {
+      requireMatchingPassword();
+      const result = await AuthManager.request('/apiauth/register', {
+        body: {username: username.trim(), email: email.trim(), password},
+      });
+      setChallenge(result.challenge_id);
+      changeMode(
+        'verify',
+        'Un code a été envoyé par e-mail. Il est valable 10 minutes.',
+      );
+    });
+  const verify = () =>
+    execute(async () => {
+      await AuthManager.request('/apiauth/verify', {
+        body: {challenge_id: challenge, code: code.trim()},
+      });
+      changeMode(
+        'login',
+        'Votre compte est confirmé. Connectez-vous avec votre pseudo et votre mot de passe.',
+      );
+    });
+  const forgot = () =>
+    execute(async () => {
+      const result = await AuthManager.request('/apiauth/forgotpassword', {
+        body: {username: username.trim(), email: email.trim()},
+      });
+      setChallenge(result.challenge_id);
+      changeMode('reset', result.message);
+    });
+  const reset = () =>
+    execute(async () => {
+      requireMatchingPassword();
+      await AuthManager.request('/apiauth/resetpassword', {
+        body: {challenge_id: challenge, code: code.trim(), password},
+      });
+      changeMode('login', 'Mot de passe modifié. Veuillez vous connecter.');
+    });
+  const offline = () =>
+    execute(async () => {
+      if (!global.collectionOwnerLogin || !global.collectionFetched) {
+        throw new Error('Aucune collection enregistrée sur cet appareil.');
+      }
+      global.forceOffline = true;
+      global.isConnected = false;
+      await AsyncStorage.setItem('forceOffline', '1');
+      close();
+    });
+  if (connected && AuthManager.hasSession()) {
+    return (
+      <ProfileScreen
+        navigation={navigation}
+        onSessionEnded={() => {
+          setConnected(false);
+          changeMode('login');
+        }}
+      />
+    );
+  }
+  const titles = {
+    login: 'Connexion à BDovore',
+    register: 'Créer mon compte',
+    verify: 'Confirmer mon compte',
+    forgot: 'Mot de passe oublié',
+    reset: 'Nouveau mot de passe',
+  };
+  return (
+    <AccountPage
+      title={titles[mode]}
+      message={message}
+      error={error}
+      busy={busy || !ready}
+      onClose={close}>
+      {['login', 'register', 'forgot'].includes(mode) ? (
+        <AccountField
+          label="Pseudo"
+          value={username}
+          onChangeText={setUsername}
+          autoComplete="username"
+        />
+      ) : null}
+      {['register', 'forgot'].includes(mode) ? (
+        <AccountField
+          label="Adresse e-mail"
+          value={email}
+          onChangeText={setEmail}
+          keyboardType="email-address"
+          autoComplete="email"
+        />
+      ) : null}
+      {['verify', 'reset'].includes(mode) ? (
+        <AccountField
+          label="Code reçu par e-mail"
+          value={code}
+          onChangeText={setCode}
+          keyboardType="number-pad"
+          maxLength={8}
+          autoComplete="one-time-code"
+        />
+      ) : null}
+      {['login', 'register', 'reset'].includes(mode) ? (
+        <AccountField
+          label={mode === 'reset' ? 'Nouveau mot de passe' : 'Mot de passe'}
+          value={password}
+          onChangeText={setPassword}
+          password
+          autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+        />
+      ) : null}
+      {['register', 'reset'].includes(mode) ? (
+        <>
+          <AccountField
+            label="Confirmer le mot de passe"
+            value={confirmation}
+            onChangeText={setConfirmation}
+            password
+            autoComplete="new-password"
+          />
+          <Text style={CommonStyles.defaultText}>{passwordHelp}</Text>
+        </>
+      ) : null}
+      {mode === 'login' ? (
+        <>
+          <AccountButton
+            title="Se connecter"
+            onPress={signIn}
+            disabled={!ready || busy}
+          />
+          <AccountButton
+            title="Créer un compte"
+            onPress={() => changeMode('register')}
+            secondary
+          />
+          <AccountButton
+            title="Mot de passe oublié"
+            onPress={() => changeMode('forgot')}
+            secondary
+          />
+          {global.collectionOwnerLogin && global.collectionFetched ? (
+            <AccountButton
+              title={'Consulter hors ligne : ' + global.collectionOwnerLogin}
+              onPress={offline}
+              secondary
+            />
+          ) : null}
+        </>
+      ) : null}
+      {mode === 'register' ? (
+        <AccountButton title="Créer mon compte" onPress={register} />
+      ) : null}
+      {mode === 'verify' ? (
+        <>
+          <AccountButton title="Confirmer mon compte" onPress={verify} />
+          <AccountButton
+            title="Renvoyer un code"
+            onPress={() =>
+              changeMode(
+                'register',
+                'Renseignez à nouveau les mêmes identifiants pour recevoir un nouveau code.',
+              )
+            }
+            secondary
+          />
+        </>
+      ) : null}
+      {mode === 'forgot' ? (
+        <AccountButton title="Recevoir un code" onPress={forgot} />
+      ) : null}
+      {mode === 'reset' ? (
+        <>
+          <AccountButton title="Enregistrer le mot de passe" onPress={reset} />
+          <AccountButton
+            title="Demander un autre code"
+            onPress={() => changeMode('forgot')}
+            secondary
+          />
+        </>
+      ) : null}
+      {mode !== 'login' ? (
+        <AccountButton
+          title="Retour à la connexion"
+          onPress={() => changeMode('login')}
+          secondary
+        />
+      ) : null}
+    </AccountPage>
   );
 }
-
 export default LoginScreen;
