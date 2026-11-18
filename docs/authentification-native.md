@@ -57,3 +57,10 @@ cd android
 ```
 
 Vérifier ensuite sur appareils iOS et Android l'envoi SMTP et les parcours contre le backend activé. Les tests automatisés utilisent des réponses simulées et ne contactent pas les comptes réels. Avant les stores, incrémenter les numéros de version/build suivant le processus habituel, puis publier progressivement ; les numéros de distribution ne sont pas modifiés dans cette branche.
+
+
+## Refus du Bearer après connexion
+
+Un succès de `/apiauth/login` ne suffit pas : les requêtes de collection et `/apicompte/me` utilisent ensuite `Authorization: Bearer …`. Sur Apache/FastCGI, reporter les directives de `public/.htaccess.sample` du backend dans le vrai `.htaccess` d'environnement. Sinon les identifiants sont acceptés mais les appels suivants reçoivent `401 / invalid_session`. Les routes de l'ancienne app par token historique ne permettent pas de détecter cette erreur de configuration.
+
+L'app termine maintenant le chargement sur erreur, y compris lorsqu'une requête concurrente a invalidé la session ou qu'une page suivante échoue. Elle affiche l'erreur même si le cache est vide, arrête les étapes suivantes de synchronisation et ignore les callbacks d'un ancien téléchargement après une relance.

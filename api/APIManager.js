@@ -193,7 +193,7 @@ export async function fetchJSON(request, context, callback, params = {},
               }
             })
             .catch((error) => {
-              console.debug(error);
+              callback(formatResult([], error.message || 'Le téléchargement a échoué.'));
             });
         }
         // Perform all pages request at once. It is far far faster than
@@ -204,7 +204,10 @@ export async function fetchJSON(request, context, callback, params = {},
         }
       })
       .catch((error) => {
-        if (error.code === 'session_changed') { return; }
+        if (error.code === 'session_changed') {
+          callback(formatResult([], error.message));
+          return;
+        }
         if (error.code === 'invalid_session') {
           if (context?.navigation) { context.navigation.navigate('Login'); }
           callback(formatResult([], error.message));
