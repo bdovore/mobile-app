@@ -5,7 +5,8 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-platform :ios, '15.1'
+ios_deployment_target = '15.1'
+platform :ios, ios_deployment_target
 prepare_react_native_project!
 
 linkage = ENV['USE_FRAMEWORKS']
@@ -31,6 +32,22 @@ target 'bdovore' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # React Native raises the deployment target for libraries, but skips resource bundles.
+    minimum_ios_version = Gem::Version.new(ios_deployment_target)
+    installer.pods_project.native_targets.each do |pod_target|
+      next unless pod_target.product_type == 'com.apple.product-type.bundle'
+
+      pod_target.build_configurations.each do |build_config|
+        settings = build_config.build_settings
+        deployment_target = settings['IPHONEOS_DEPLOYMENT_TARGET']
+        next unless deployment_target && Gem::Version.correct?(deployment_target)
+        next unless Gem::Version.new(deployment_target) < minimum_ios_version
+
+        settings['IPHONEOS_DEPLOYMENT_TARGET'] = ios_deployment_target
+      end
+    end
+
     # Workaround for Xcode 26: newer Apple Clang breaks consteval in fmt 11.0.2.
 
     # Patch base.h to disable consteval since the header doesn't check for pre-defined FMT_USE_CONSTEVAL.

@@ -116,6 +116,38 @@ it('refuse une confirmation de mot de passe différente avant l’envoi', async 
   await press('Créer mon compte');
   expect(Auth.request).not.toHaveBeenCalled();
 });
+it('récupère les pseudos avec seulement l’e-mail puis revient à la connexion', async () => {
+  await act(async () => {
+    tree = renderer.create(<LoginScreen navigation={navigation} />);
+  });
+  await press('Pseudo oublié');
+  expect(field('Pseudo')).toBeUndefined();
+  expect(field('Mot de passe')).toBeUndefined();
+  await type('Adresse e-mail', ' shared@example.test ');
+  Auth.request.mockResolvedValueOnce({
+    message:
+      'Si cette adresse est associée à un compte actif, un e-mail a été envoyé.',
+  });
+  await press('Recevoir mes pseudos');
+  expect(Auth.request).toHaveBeenLastCalledWith('/apiauth/forgotlogin', {
+    body: {email: 'shared@example.test'},
+  });
+  expect(button('Se connecter')).toBeDefined();
+  expect(field('Code reçu par e-mail')).toBeUndefined();
+});
+it('conserve l’e-mail en passant de mot de passe oublié à pseudo oublié', async () => {
+  await act(async () => {
+    tree = renderer.create(<LoginScreen navigation={navigation} />);
+  });
+  await press('Mot de passe oublié');
+  await type('Adresse e-mail', 'shared@example.test');
+  await press('Pseudo oublié');
+  expect(field('Adresse e-mail').props.value).toBe('shared@example.test');
+  Auth.request.mockRejectedValueOnce(new Error('Réessayez plus tard.'));
+  await press('Recevoir mes pseudos');
+  expect(button('Recevoir mes pseudos')).toBeDefined();
+  expect(field('Adresse e-mail').props.value).toBe('shared@example.test');
+});
 it('connexion impossible hors ligne sans fabriquer de faux jeton', async () => {
   NetInfo.fetch.mockResolvedValue({isConnected: false});
   await act(async () => {

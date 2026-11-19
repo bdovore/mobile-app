@@ -107,7 +107,7 @@ export function AccountButton({
   );
 }
 export const passwordHelp =
-  'Au moins 15 caractères, au maximum 72 octets. Les espaces sont autorisés.';
+  'Au moins 6 caractères, au maximum 72 octets. Les espaces sont autorisés.';
 const styles = StyleSheet.create({
   page: {padding: 24, paddingTop: 56, paddingBottom: 48, alignItems: 'center'},
   form: {width: '100%', maxWidth: 480},

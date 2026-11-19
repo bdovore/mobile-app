@@ -179,6 +179,13 @@ function LoginScreen({navigation}) {
       setChallenge(result.challenge_id);
       changeMode('reset', result.message);
     });
+  const forgotLogin = () =>
+    execute(async () => {
+      const result = await AuthManager.request('/apiauth/forgotlogin', {
+        body: {email: email.trim()},
+      });
+      changeMode('login', result.message);
+    });
   const reset = () =>
     execute(async () => {
       requireMatchingPassword();
@@ -213,6 +220,7 @@ function LoginScreen({navigation}) {
     register: 'Créer mon compte',
     verify: 'Confirmer mon compte',
     forgot: 'Mot de passe oublié',
+    forgotLogin: 'Pseudo oublié',
     reset: 'Nouveau mot de passe',
   };
   return (
@@ -244,7 +252,7 @@ function LoginScreen({navigation}) {
           autoComplete="off"
         />
       ) : null}
-      {['register', 'forgot'].includes(mode) ? (
+      {['register', 'forgot', 'forgotLogin'].includes(mode) ? (
         <AccountField
           label="Adresse e-mail"
           value={email}
@@ -301,6 +309,11 @@ function LoginScreen({navigation}) {
             onPress={() => changeMode('forgot')}
             secondary
           />
+          <AccountButton
+            title="Pseudo oublié"
+            onPress={() => changeMode('forgotLogin')}
+            secondary
+          />
           {global.collectionOwnerLogin && global.collectionFetched ? (
             <AccountButton
               title={'Consulter hors ligne : ' + global.collectionOwnerLogin}
@@ -329,7 +342,28 @@ function LoginScreen({navigation}) {
         </>
       ) : null}
       {mode === 'forgot' ? (
-        <AccountButton title="Recevoir un code" onPress={forgot} />
+        <>
+          <AccountButton title="Recevoir un code" onPress={forgot} />
+          <AccountButton
+            title="Pseudo oublié"
+            onPress={() => changeMode('forgotLogin')}
+            secondary
+          />
+        </>
+      ) : null}
+      {mode === 'forgotLogin' ? (
+        <>
+          <Text style={CommonStyles.defaultText}>
+            Nous vous enverrons le ou les pseudos de vos comptes BDovore actifs
+            associés à cette adresse e-mail.
+          </Text>
+          <AccountButton title="Recevoir mes pseudos" onPress={forgotLogin} />
+          <AccountButton
+            title="J’ai aussi oublié mon mot de passe"
+            onPress={() => changeMode('forgot')}
+            secondary
+          />
+        </>
       ) : null}
       {mode === 'reset' ? (
         <>
