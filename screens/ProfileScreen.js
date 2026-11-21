@@ -1,9 +1,18 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {Alert, AppState, StyleSheet, Switch, Text, View} from 'react-native';
+import {
+  Alert,
+  AppState,
+  Linking,
+  Share,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import * as AuthManager from '../api/AuthManager';
-import CollectionManager from '../api/CollectionManager';
+import {bdovoreBaseURL} from '../api/Config';
 import {
   AccountButton,
   AccountField,
@@ -12,11 +21,11 @@ import {
 } from '../components/AccountForm';
 import {CommonStyles} from '../styles/CommonStyles';
 
-function ProfileScreen({navigation, onSessionEnded}) {
+function ProfileScreen({navigation, onClose, onSessionEnded}) {
   const [profile, setProfile] = useState(AuthManager.getUser());
-  const [draft, setDraft] = useState(AuthManager.getUser());
   const [mode, setMode] = useState('profile');
   const [busy, setBusy] = useState(false);
+  const [pendingPreference, setPendingPreference] = useState(null);
   const [online, setOnline] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -26,31 +35,34 @@ function ProfileScreen({navigation, onSessionEnded}) {
   const [confirmation, setConfirmation] = useState('');
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState('');
-  const [dirty, setDirty] = useState(false);
-  const dirtyRef = useRef(false);
+  const actionInFlight = useRef(false);
+  const profileRefresh = useRef(null);
 
-  const refresh = useCallback(async () => {
-    try {
-      const network = await NetInfo.fetch();
-      const connected =
-        !!network.isConnected &&
-        network.isInternetReachable !== false &&
-        !global.forceOffline;
-      setOnline(connected);
-      if (!connected || !AuthManager.hasSession()) {
-        return;
-      }
-      const user = await AuthManager.refreshProfile();
-      setProfile(user);
-      if (!dirtyRef.current) {
-        setDraft(user);
-      }
-    } catch (err) {
-      setError(err.message);
-      if (err.code === 'invalid_session') {
-        onSessionEnded();
-      }
+  const refresh = useCallback(() => {
+    if (actionInFlight.current || profileRefresh.current) {
+      return profileRefresh.current;
     }
+    profileRefresh.current = Promise.resolve().then(async () => {
+      try {
+        const network = await NetInfo.fetch();
+        const connected =
+          !!network.isConnected &&
+          network.isInternetReachable !== false &&
+          !global.forceOffline;
+        setOnline(connected);
+        if (connected && AuthManager.hasSession()) {
+          setProfile(await AuthManager.refreshProfile());
+        }
+      } catch (err) {
+        setError(err.message);
+        if (err.code === 'invalid_session') {
+          onSessionEnded();
+        }
+      } finally {
+        profileRefresh.current = null;
+      }
+    });
+    return profileRefresh.current;
   }, [onSessionEnded]);
   useEffect(() => {
     refresh();
@@ -66,11 +78,6 @@ function ProfileScreen({navigation, onSessionEnded}) {
     };
   }, [navigation, refresh]);
 
-  const edit = (field, value) => {
-    setDraft(previous => ({...previous, [field]: value}));
-    dirtyRef.current = true;
-    setDirty(true);
-  };
   const changeMode = next => {
     setMode(next);
     setError('');
@@ -81,13 +88,16 @@ function ProfileScreen({navigation, onSessionEnded}) {
     setCode('');
   };
   const execute = async action => {
-    if (busy) {
+    if (actionInFlight.current) {
       return;
     }
+    actionInFlight.current = true;
     setBusy(true);
     setError('');
     setMessage('');
     try {
+      // Finish any earlier read before a write replaces the cached profile.
+      await profileRefresh.current;
       const network = await NetInfo.fetch();
       if (
         !network.isConnected ||
@@ -103,25 +113,23 @@ function ProfileScreen({navigation, onSessionEnded}) {
         onSessionEnded();
       }
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   };
-  const save = () =>
-    execute(async () => {
-      const user = await AuthManager.updateProfile({
-        location: draft.location,
-        birthday: draft.birthday,
-        open_collection: draft.open_collection,
-        explicit_content: draft.explicit_content,
-        newsletter: draft.newsletter,
-        square_type: draft.square_type,
+  const savePreference = async (field, value) => {
+    if (!online || actionInFlight.current) {
+      return;
+    }
+    setPendingPreference({field, value});
+    try {
+      await execute(async () => {
+        setProfile(await AuthManager.updateProfile({[field]: value}));
       });
-      setProfile(user);
-      setDraft(user);
-      dirtyRef.current = false;
-      setDirty(false);
-      setMessage('Votre profil a été enregistré.');
-    });
+    } finally {
+      setPendingPreference(null);
+    }
+  };
   const changePassword = () =>
     execute(async () => {
       if (password !== confirmation) {
@@ -157,44 +165,17 @@ function ProfileScreen({navigation, onSessionEnded}) {
         code: code.trim(),
       });
       setProfile(user);
-      setDraft(previous => ({...previous, email: user.email}));
       changeMode('profile');
       setMessage('Adresse e-mail modifiée.');
     });
-  const deleteAccount = () =>
-    Alert.alert(
-      'Supprimer mon compte',
-      'Votre collection, vos notes et vos commentaires seront supprimés définitivement. Le compte forum reste indépendant.',
-      [
-        {text: 'Annuler', style: 'cancel'},
-        {
-          text: 'Supprimer définitivement',
-          style: 'destructive',
-          onPress: () =>
-            execute(async () => {
-              await AuthManager.request('/apicompte/delete', {
-                authenticated: true,
-                body: {current_password: currentPassword},
-              });
-              if (global.db) {
-                CollectionManager.clearDatabase();
-              }
-              await AuthManager.clearSession();
-              global.collectionOwnerId = null;
-              global.collectionOwnerLogin = null;
-              global.login = null;
-              global.localTimestamp = null;
-              await AsyncStorage.multiRemove([
-                'collectionOwnerId',
-                'login',
-                'localTimestamp',
-                'collectionFetched',
-              ]);
-              onSessionEnded();
-            }),
-        },
-      ],
-    );
+  const openWebsite = url =>
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Impossible d’ouvrir le lien', 'Veuillez réessayer.');
+    });
+  const shareCollection = url =>
+    Share.share({message: url}).catch(() => {
+      Alert.alert('Impossible de partager le lien', 'Veuillez réessayer.');
+    });
   const logout = async () => {
     setBusy(true);
     try {
@@ -209,6 +190,7 @@ function ProfileScreen({navigation, onSessionEnded}) {
   const toggleOffline = async () => {
     global.forceOffline = !global.forceOffline;
     await AsyncStorage.setItem('forceOffline', global.forceOffline ? '1' : '0');
+    await profileRefresh.current;
     await refresh();
   };
   const preference = (label, field) => (
@@ -218,8 +200,12 @@ function ProfileScreen({navigation, onSessionEnded}) {
       </Text>
       <Switch
         accessibilityLabel={label}
-        value={!!draft[field]}
-        onValueChange={value => edit(field, value)}
+        value={
+          pendingPreference?.field === field
+            ? pendingPreference.value
+            : !!profile[field]
+        }
+        onValueChange={value => savePreference(field, value)}
         disabled={!online || busy}
       />
     </View>
@@ -229,11 +215,12 @@ function ProfileScreen({navigation, onSessionEnded}) {
     email: 'Changer mon e-mail',
     confirmEmail: 'Confirmer mon e-mail',
     password: 'Changer mon mot de passe',
-    delete: 'Supprimer mon compte',
   };
-  if (!profile || !draft) {
+  if (!profile) {
     return null;
   }
+  const publicId = profile.public_id ?? profile.user_id * 1209 + 951;
+  const publicCollectionUrl = `${bdovoreBaseURL}/guest?user=${publicId}`;
   return (
     <AccountPage
       title={titles[mode]}
@@ -245,7 +232,7 @@ function ProfileScreen({navigation, onSessionEnded}) {
       }
       error={error}
       busy={busy}
-      onClose={() => navigation.goBack()}>
+      onClose={onClose}>
       {mode === 'profile' ? (
         <>
           <Text style={[CommonStyles.defaultText, styles.username]}>
@@ -254,48 +241,43 @@ function ProfileScreen({navigation, onSessionEnded}) {
           <Text style={[CommonStyles.defaultText, styles.email]}>
             {profile.email}
           </Text>
-          <AccountField
-            label="Localisation"
-            value={draft.location || ''}
-            onChangeText={value => edit('location', value)}
-            editable={online}
-          />
-          <AccountField
-            label="Date de naissance (AAAA-MM-JJ)"
-            value={draft.birthday || ''}
-            onChangeText={value => edit('birthday', value)}
-            maxLength={10}
-            editable={online}
-          />
-          {preference(
-            'Autoriser la consultation de ma collection',
-            'open_collection',
-          )}
-          {preference('Afficher le contenu adulte', 'explicit_content')}
-          {preference('Recevoir la newsletter', 'newsletter')}
-          <View style={styles.row}>
-            <Text style={CommonStyles.defaultText}>Carré magique manuel</Text>
-            <Switch
-              accessibilityLabel="Carré magique manuel"
-              value={draft.square_type === 1}
-              onValueChange={value => edit('square_type', value ? 1 : 0)}
-              disabled={!online || busy}
-            />
-          </View>
-          <AccountButton
-            title="Enregistrer mon profil"
-            onPress={save}
-            disabled={!online || !dirty}
-          />
-          <AccountButton
-            title="Changer mon e-mail"
+          <Text
+            accessibilityRole="link"
+            accessibilityState={{disabled: !online}}
+            disabled={!online}
+            style={[CommonStyles.defaultText, styles.emailLink]}
             onPress={() => {
               setEmail(profile.email);
               changeMode('email');
-            }}
-            secondary
-            disabled={!online}
-          />
+            }}>
+            Changer mon e-mail
+          </Text>
+          {preference(
+            'Activer la page publique de ma collection',
+            'open_collection',
+          )}
+          {profile.open_collection &&
+          pendingPreference?.field !== 'open_collection' ? (
+            <View style={styles.publicCollection}>
+              <Text
+                accessibilityRole="link"
+                style={[CommonStyles.defaultText, styles.link]}
+                onPress={() => openWebsite(publicCollectionUrl)}>
+                {publicCollectionUrl}
+              </Text>
+              <AccountButton
+                title="Partager"
+                onPress={() => shareCollection(publicCollectionUrl)}
+                secondary
+              />
+            </View>
+          ) : null}
+          {preference('Afficher le contenu adulte', 'explicit_content')}
+          <Text style={[CommonStyles.defaultText, styles.preferenceHelp]}>
+            BDovore recense tous les types de BD, comics et mangas. Par défaut,
+            les couvertures des contenus « pour adultes » ne sont pas affichées
+            sur le site ni dans l’application mobile.
+          </Text>
           <AccountButton
             title="Changer mon mot de passe"
             onPress={() => changeMode('password')}
@@ -312,12 +294,13 @@ function ProfileScreen({navigation, onSessionEnded}) {
             secondary
           />
           <AccountButton title="Se déconnecter" onPress={logout} secondary />
-          <AccountButton
-            title="Supprimer mon compte"
-            onPress={() => changeMode('delete')}
-            secondary
-            disabled={!online}
-          />
+          <Text
+            accessibilityRole="link"
+            accessibilityHint="Ouvre votre compte sur le site BDovore pour suivre la procédure de suppression"
+            style={[CommonStyles.linkText, styles.deleteLink]}
+            onPress={() => openWebsite(`${bdovoreBaseURL}/compte?mobile=T`)}>
+            Supprimer mon compte
+          </Text>
         </>
       ) : null}
       {mode === 'email' ? (
@@ -329,7 +312,7 @@ function ProfileScreen({navigation, onSessionEnded}) {
           autoComplete="email"
         />
       ) : null}
-      {['email', 'password', 'delete'].includes(mode) ? (
+      {['email', 'password'].includes(mode) ? (
         <AccountField
           label="Mot de passe actuel"
           value={currentPassword}
@@ -385,18 +368,6 @@ function ProfileScreen({navigation, onSessionEnded}) {
           />
         </>
       ) : null}
-      {mode === 'delete' ? (
-        <>
-          <Text style={CommonStyles.defaultText}>
-            Cette action supprime définitivement votre compte BDovore et votre
-            collection. Votre compte forum reste indépendant.
-          </Text>
-          <AccountButton
-            title="Supprimer définitivement mon compte"
-            onPress={deleteAccount}
-          />
-        </>
-      ) : null}
       {mode !== 'profile' ? (
         <AccountButton
           title="Retour au profil"
@@ -416,6 +387,20 @@ const styles = StyleSheet.create({
   },
   preferenceLabel: {flex: 1, marginRight: 12},
   username: {fontSize: 20, fontWeight: '700', marginBottom: 8},
-  email: {marginBottom: 20},
+  link: {textDecorationLine: 'underline'},
+  emailLink: {
+    alignSelf: 'flex-start',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+    paddingVertical: 8,
+    marginBottom: 12,
+  },
+  publicCollection: {alignItems: 'flex-start', marginBottom: 10},
+  preferenceHelp: {fontSize: 14, lineHeight: 21, marginBottom: 20},
+  deleteLink: {
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    paddingVertical: 12,
+  },
 });
 export default ProfileScreen;

@@ -26,7 +26,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, {useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {Text} from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -82,7 +82,7 @@ function LoginScreen({navigation}) {
     navigation.canGoBack()
       ? navigation.goBack()
       : navigation.navigate('CoreTab');
-  const changeMode = (next, nextMessage = '') => {
+  const changeMode = useCallback((next, nextMessage = '') => {
     setLoginNeedsPseudo(false);
     setAccountPseudo('');
     setMode(next);
@@ -91,7 +91,11 @@ function LoginScreen({navigation}) {
     setPassword('');
     setConfirmation('');
     setCode('');
-  };
+  }, []);
+  const onSessionEnded = useCallback(() => {
+    setConnected(false);
+    changeMode('login');
+  }, [changeMode]);
   const execute = async action => {
     if (busy) {
       return;
@@ -208,10 +212,8 @@ function LoginScreen({navigation}) {
     return (
       <ProfileScreen
         navigation={navigation}
-        onSessionEnded={() => {
-          setConnected(false);
-          changeMode('login');
-        }}
+        onClose={close}
+        onSessionEnded={onSessionEnded}
       />
     );
   }
