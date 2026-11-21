@@ -26,272 +26,188 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, Text, TouchableOpacity, View, Linking } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import { InAppBrowser } from 'react-native-inappbrowser-reborn';
-//import { ButtonGroup, SearchBar } from 'react-native-elements';
-import { SearchBar, ButtonGroup } from '@rneui/themed';
-
-import { AlbumItem } from '../components/AlbumItem';
-import { AuteurItem } from '../components/AuteurItem';
-import { AlbumItemHeight, CommonStyles } from '../styles/CommonStyles';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Image, Keyboard, Modal, Pressable,
+  SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useIsFocused } from '@react-navigation/native';
 import { Icon } from '../components/Icon';
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import { LoadingIndicator } from '../components/LoadingIndicator';
-import { SerieItem } from '../components/SerieItem';
-import * as APIManager from '../api/APIManager';
-import * as Helpers from '../api/Helpers';
+import * as API from '../api/APIManager';
+import { toDict } from '../api/Helpers';
 import CollectionManager from '../api/CollectionManager';
+import SettingsManager from '../api/SettingsManager';
+import { useCatalogue } from '../api/useCatalogue';
+import { bdovored, CommonStyles } from '../styles/CommonStyles';
 
+const names = { ser: 'Séries', alb: 'Albums', aut: 'Auteurs' };
+const details = {
+  ser: ['Serie', 'id_serie', 1], alb: ['Album', 'id_tome', 2], aut: ['Auteur', 'id_auteur', 2],
+};
+const rayons = ['', 'BD', 'Mangas', 'Comics'];
 
-function SearchScreen({ navigation }) {
-
-  const [data, setData] = useState([]);
-  const [errortext, setErrortext] = useState('');
-  const [keywords, setKeywords] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [searchMode, setSearchMode] = useState(0);
-  const [toggleElement, setToggleElement] = useState(Date.now());
-
-  const stateRefKeywords = useRef();
-  stateRefKeywords.current = keywords;
-  const stateRefSearchMode = useRef();
-  stateRefSearchMode.current = searchMode;
-
-  const toggle = () => {
-    setToggleElement(Date.now());
-  }
-
-  useFocusEffect(() => {
-    if (searchMode == 1) {
-     // CollectionManager.selectOwnAlbum(data);
-    }
-  });
-
-  useEffect(() => {
-    // Make sure data is refreshed when login/token changed
-    const willFocusSubscription = navigation.addListener('focus', () => {
-      toggle();
-    });
-    return willFocusSubscription;
-  }, []);
-
-  useEffect(() => {
-    onSearch(keywords);
-  }, [searchMode]);
-
-  const onSearchFetched = (searchedText, mode, result) => {
-    // As many requests are sent to the server while typing the keywords,
-    // it may happen that answers are not received in order. So we make
-    // sure to only take into account the result of the request for
-    // the last provided keywords.
-    if (searchedText == stateRefKeywords.current && mode == stateRefSearchMode.current) {
-      if (!result.error && stateRefSearchMode.current == 1) {
-        CollectionManager.selectOwnAlbum(result.items);
-      }
-      setData(result.items);
-      setErrortext(result.error);
-      setLoading(false);
-    }
-
-    if (stateRefKeywords.current == '') {
-      setLoading(false);
-    }
-  }
-
-  const onSearch = (searchText) => {
-
-    if (!global.isConnected) { return; }
-
-    setKeywords(searchText);
-    if (searchText == '') {
-      setLoading(false);
-      setData([]);
-      return;
-    }
-
-    const mode = parseInt(searchMode);
-    const callback = (result) => onSearchFetched(searchText, mode, result);
-    setLoading(true);
-    switch (mode) {
-      case 0:
-        APIManager.fetchSerieByTerm(searchText, callback);
-        break;
-      case 1:
-        {
-          if (searchText.length >= 8 && Helpers.isNumeric(searchText)) {
-            let params = (searchText.length > 10) ? { EAN: searchText } : { ISBN: searchText };
-            APIManager.fetchAlbum(callback, params);
-          }
-          APIManager.fetchAlbum(callback, { term: searchText });
-        }
-        break;
-      case 2:
-        APIManager.fetchAuteurByTerm(searchText, callback);
-        break;
-    }
-  }
-
-  const onSearchCancel = () => {
-    setKeywords('');
-    setData([]);
-  }
-
-  const onPressTypeButton = (selectedIndex) => {
-    if (selectedIndex != searchMode) {
-      setSearchMode(selectedIndex);
-      setData([]);
-    }
-  }
-
-  const onBarcodeSearch = () => {
-    if (global.isConnected) {
-      navigation.push('BarcodeScanner');
-    }
-  }
-
-  const keyExtractor = useCallback((item, index) => {
-    if (Helpers.isValid(item)) {
-      switch (parseInt(searchMode)) {
-        case 0: return parseInt(item.ID_SERIE);
-        case 1: return Helpers.getAlbumUID(item);
-        case 2: return parseInt(item.ID_AUTEUR);
-      }
-    }
-    return index;
-  }, [searchMode]);
-
-  const renderItem = useCallback(({ item, index }) => {
-    if (Helpers.isValid(item)) {
-      switch (parseInt(searchMode)) {
-        case 0: return (<SerieItem navigation={navigation} item={Helpers.toDict(item)} index={index} />);
-        case 1: return (<AlbumItem navigation={navigation} item={Helpers.toDict(CollectionManager.getFirstAlbumEditionOfSerieInCollection(item))} index={index} refreshCallback={toggle}/>);
-        case 2: return (<AuteurItem navigation={navigation} author={item} index={index} />);
-      }
-    }
-    return null;
-  }, [searchMode]);
-
-  const getItemLayout = useCallback((data, index) => ({
-    length: AlbumItemHeight,
-    offset: AlbumItemHeight * index,
-    index
-  }), []);
-
-  const onAddProposition =  async () => {
-    APIManager.addProposition(keywords)
-  };
-
-  return (
-    <View style={CommonStyles.screenStyle}>
-      <View>
-        <View style={[{ flexDirection: 'row', margin: 0, marginTop: 5 }, CommonStyles.screenStyle, { flex: 0 }]}>
-          <View style={{ flex: 1 }}>
-            <SearchBar
-              placeholder={parseInt(searchMode) == 0 ? 'Nom de la série...' : parseInt(searchMode) == 1 ? "Nom de l'album ou ISBN..." : "Nom de l'auteur..."}
-              searchIcon={
-                <Ionicons
-                  name="search"
-                  size={20}
-                  color="#888"
-                />}
-               clearIcon={
-                keywords ?
-                  <Ionicons
-                    name="close-circle"  // ou "close" pour une croix simple
-                    size={20}
-                    color="#888"
-                    onPress={onSearchCancel}
-                  /> : null
-                }
-              onChangeText={onSearch}
-              onCancel={onSearchCancel}
-              onClear={onSearchCancel}
-              value={keywords}
-              platform='ios'
-              autoCapitalize='none'
-              autoCorrect={false}
-              inputContainerStyle={[{ height: 30 }, CommonStyles.searchContainerStyle]}
-              containerStyle={[CommonStyles.screenStyle]}
-              cancelButtonTitle='Annuler'
-              showLoading={loading}
-              inputStyle={[CommonStyles.defaultText, { marginTop: 5 }]}
-            />
-          </View>
-          <TouchableOpacity
-            onPress={onBarcodeSearch}
-            title="Search"
-            style={{ marginLeft: 5, marginRight: 8, marginVertical: 0 }}>
-            <Icon
-              name='barcode-scan'
-              size={36}
-              color={CommonStyles.iconStyle.color} />
-          </TouchableOpacity>
-        </View>
-        <View style={{ marginLeft: -2, marginRight: -2, marginTop: 0, marginBottom: 0 }}>
-          <ButtonGroup
-            onPress={onPressTypeButton}
-            selectedIndex={searchMode}
-            buttons={[
-              { element: () => <Text style={CommonStyles.defaultText}>Séries</Text> },
-              { element: () => <Text style={CommonStyles.defaultText}>Albums</Text> },
-              { element: () => <Text style={CommonStyles.defaultText}>Auteurs</Text> }]}
-            containerStyle={CommonStyles.buttonGroupContainerStyle}
-            buttonStyle={CommonStyles.buttonGroupButtonStyle}
-            selectedButtonStyle={CommonStyles.buttonGroupSelectedButtonStyle}
-            innerBorderStyle={CommonStyles.buttonGroupInnerBorderStyle}
-          />
-        </View>
-      </View>
-    {global.isConnected ?
-       <View style={{ flex: 1, marginHorizontal: 1 }}>
-        {errortext ? (
-          <Text style={CommonStyles.errorTextStyle}>
-            {errortext}
-          </Text>
-        ) : null}
-        {loading ? <LoadingIndicator style={{ height: '100%' }} /> : (
-          <FlatList
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            data={data}
-            keyExtractor={keyExtractor}
-            renderItem={renderItem}
-            getItemLayout={getItemLayout}
-            ItemSeparatorComponent={Helpers.renderSeparator}
-            extraData={toggleElement}
-          />
-        )}
-
-        {/* Bouton "Proposer un ajout" */}
-        {keywords && !loading ? (
-          <View style={{
-            padding: 15,
-            backgroundColor: CommonStyles.screenStyle.backgroundColor,
-            borderTopWidth: 1,
-            borderTopColor: '#ccc'
-          }}>
-            <Text
-              onPress={onAddProposition}
-              style={[CommonStyles.linkText, { textAlign: 'center', marginBottom: 10 }]}>
-                Rien trouvé ? Vous pouvez proposer un ajout
-              </Text>
-
-          </View>
-        ) : null}
-      </View>:
-            <View style={[CommonStyles.screenStyle, { alignItems: 'center', height: '50%', flexDirection: 'column' }]}>
-              <View style={{ flex: 1 }}></View>
-              <Text style={CommonStyles.defaultText}>Recherche indisponible en mode non-connecté.{'\n'}</Text>
-              <Text style={CommonStyles.defaultText}>Rafraichissez cette page une fois connecté.</Text>
-              <TouchableOpacity style={{ flexDirection: 'column', marginTop: 20 }} onPress={onSearch}>
-                <Icon name='refresh' size={50} color={CommonStyles.markIconDisabled.color} />
-              </TouchableOpacity>
-              <View style={{ flex: 1 }}></View>
-            </View>}
-        </View>
-      );
+function Button({ label, onPress, selected, disabled, image }) {
+  return <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button"
+    accessibilityState={{ selected, disabled }} style={[styles.button, selected && styles.selected]}>
+    {!!image && <Image source={{ uri: image }} style={styles.rayon} />}
+    <Text style={[CommonStyles.defaultText, selected && styles.white]}>{label}</Text>
+  </Pressable>;
 }
 
-export default SearchScreen;
+function Cover({ row, large }) {
+  return <Image resizeMode="contain" style={large ? styles.largeCover : styles.cover}
+    source={{ uri: API.getAlbumCoverURL({ IMG_COUV: row.cover || 'default.png' }) }} />;
+}
+
+function SeriePreview({ serie, open }) {
+  const params = useMemo(() => ({ scope: 'alb', serie: serie.id }), [serie.id]);
+  const { page, busy, error, load } = useCatalogue(params);
+  const group = page?.groups.alb;
+  return <View style={[styles.preview, global.isDarkMode && styles.darkPreview]}>
+    <FlatList horizontal keyboardShouldPersistTaps="handled" data={group?.rows || []}
+      keyExtractor={row => String(row.id)} renderItem={({ item }) =>
+        <Pressable accessibilityRole="button" onPress={() => open('alb', item)} style={styles.tile}>
+          <Cover row={item} large />
+          <Text style={CommonStyles.defaultText} numberOfLines={2}>{item.number ? 'T. ' + item.number + ' · ' : ''}{item.label}</Text>
+        </Pressable>}
+      ListFooterComponent={group?.more && !busy ?
+        <Button label="Plus de tomes" onPress={() => load(group.rows.length)} /> : null} />
+    {busy && <ActivityIndicator />}
+    {!!error && <Button label="Réessayer les tomes" onPress={() => load(group?.rows.length || 0)} />}
+    <Button label="Voir la série" onPress={() => open('ser', serie)} />
+  </View>;
+}
+
+function CatalogueList({ params, open, onGenres }) {
+  const { page, busy, error, load } = useCatalogue(params);
+  const [expanded, setExpanded] = useState(null);
+  useEffect(() => { if (page?.genres) onGenres?.(page.genres); }, [page?.genres, onGenres]);
+  const sections = Object.entries(page?.groups || {}).filter(([, group]) => group.rows.length)
+    .map(([kind, group]) => ({ kind, data: group.rows, more: group.more, key: kind }));
+
+  return <SectionList sections={sections} keyboardShouldPersistTaps="handled" stickySectionHeadersEnabled={false}
+    keyExtractor={item => String(item.id)} extraData={expanded}
+    ListHeaderComponent={page?.approximate ? <Text style={CommonStyles.defaultText}>Résultats proches de votre recherche</Text> : null}
+    renderSectionHeader={({ section }) => params.scope === 'all' ?
+      <Text style={[CommonStyles.defaultText, styles.heading]}>{names[section.kind]}</Text> : null}
+    renderItem={({ item, section: { kind } }) => {
+      const isSeries = kind === 'ser';
+      const isOpen = isSeries && expanded === item.id;
+      return <View>
+        <Pressable style={styles.row} accessibilityRole="button" accessibilityState={isSeries ? { expanded: isOpen } : {}}
+          onPress={() => {
+            Keyboard.dismiss();
+            if (isSeries) setExpanded(isOpen ? null : item.id);
+            else open(kind, item);
+          }}>
+          {kind !== 'aut' && <Cover row={item} />}
+          <View style={styles.flex}>
+            <Text style={[CommonStyles.defaultText, styles.title]}>{item.label || 'Sans titre'}</Text>
+            {!!item.subtitle && <Text style={CommonStyles.defaultText}>{item.subtitle}{item.number ? ' · T. ' + item.number : ''}</Text>}
+          </View>
+          <Text style={CommonStyles.defaultText}>{isOpen ? '⌄' : '›'}</Text>
+        </Pressable>
+        {isOpen && <SeriePreview serie={item} open={open} />}
+      </View>;
+    }}
+    renderSectionFooter={({ section }) => section.more ?
+      <Button disabled={busy} label={'Afficher plus · ' + names[section.kind]}
+        onPress={() => load(section.data.length, section.kind)} /> : null}
+    ListEmptyComponent={!busy && !error ? <Text style={[CommonStyles.defaultText, styles.heading]}>Aucun résultat.</Text> : null}
+    ListFooterComponent={<View>
+      {busy && <ActivityIndicator style={styles.heading} />}
+      {!!error && <Text accessibilityRole="alert" style={CommonStyles.errorTextStyle}>{error}</Text>}
+      {!!error && !page && <Button label="Réessayer" onPress={() => load()} />}
+      {!!params.q && !busy && !error && <Button label="Proposer un ajout" onPress={() => API.addProposition(params.q)} />}
+    </View>} />;
+}
+
+export default function SearchScreen({ navigation }) {
+  const [text, setText] = useState('');
+  const [scope, setScope] = useState('ser');
+  const [rayon, setRayon] = useState('');
+  const [genre, setGenre] = useState(null);
+  const [genres, setGenres] = useState([]);
+  const [picker, setPicker] = useState(false);
+  const [online, setOnline] = useState(global.isConnected);
+  const focused = useIsFocused();
+  const opening = useRef(null);
+  const query = text.trim();
+  const browse = useMemo(() => ({ scope, rayon, genre: genre?.id || 0, facets: 1 }), [scope, rayon, genre]);
+  const search = useMemo(() => ({ scope: 'all', q: query }), [query]);
+  const refresh = () => SettingsManager.getConnectionStatus(() => setOnline(global.isConnected && !global.forceOffline));
+  useEffect(() => {
+    if (focused) refresh();
+    return () => opening.current?.abort();
+  }, [focused]);
+  useEffect(() => { opening.current?.abort(); }, [query, browse]);
+
+  async function open(kind, row) {
+    opening.current?.abort();
+    const controller = new AbortController();
+    opening.current = controller;
+    const [screen, field, mode] = details[kind];
+    try {
+      let item = row.edition;
+      if (!item) {
+        const records = await API.catalogueRequest(screen, { [field]: row.id, mode }, controller.signal);
+        item = records?.[0];
+        if (!item) throw new Error('Cette fiche est indisponible.');
+        if (kind === 'alb' && global.db) item = toDict(CollectionManager.getFirstAlbumEditionOfSerieInCollection(item));
+      }
+      if (!controller.signal.aborted) navigation.push(screen, kind === 'aut' ? { author: item } : { item });
+    } catch (e) {
+      if (!controller.signal.aborted) Alert.alert('Ouverture de la fiche', e.message);
+    }
+  }
+
+  if (!online || global.forceOffline) return <View style={CommonStyles.screenStyle}>
+    <Text style={[CommonStyles.defaultText, styles.heading]}>Recherche indisponible hors connexion.</Text>
+    <Button label="Réessayer" onPress={refresh} />
+  </View>;
+  return <View style={CommonStyles.screenStyle}>
+    <View style={styles.toolbar}>
+      <TextInput value={text} onChangeText={setText} placeholder="Titre, auteur ou ISBN…"
+        accessibilityLabel="Rechercher dans le catalogue" placeholderTextColor="#888" maxLength={120}
+        autoCapitalize="none" autoCorrect={false} returnKeyType="search" style={[CommonStyles.defaultText, styles.input]} />
+      {!!text && <Button label="Effacer" onPress={() => setText('')} />}
+      <Pressable style={styles.button} accessibilityLabel="Scanner un code-barres" accessibilityRole="button"
+        onPress={() => navigation.push('BarcodeScanner')}><Icon name="barcode-scan" size={30} color={CommonStyles.iconStyle.color} /></Pressable>
+    </View>
+    <View style={[styles.flex, !!query && styles.hidden]}>
+      <View style={styles.toolbar}>{rayons.map(value =>
+        <Button key={value} label={value || 'Tous'} selected={rayon === value}
+          image={value && API.bdovoreBaseURL + '/style/guide/guide-rayon-' + value.toLowerCase() + '.png'}
+          onPress={() => { setRayon(value); setGenre(null); }} />)}</View>
+      <Button label={(genre?.label || 'Tous les genres') + '  ▾'} onPress={() => setPicker(true)} />
+      <View style={styles.toolbar}>{Object.entries(names).map(([key, name]) =>
+        <Button key={key} label={name} selected={scope === key} onPress={() => setScope(key)} />)}</View>
+      <CatalogueList key={JSON.stringify(browse)} params={browse} open={open} onGenres={setGenres} />
+    </View>
+    {!!query && <CatalogueList key={query} params={search} open={open} />}
+    <Modal visible={picker} transparent animationType="slide" onRequestClose={() => setPicker(false)}>
+      <View style={styles.overlay}>
+        <Pressable style={styles.flex} accessibilityRole="button" accessibilityLabel="Fermer" onPress={() => setPicker(false)} />
+        <View style={[styles.sheet, { backgroundColor: CommonStyles.screenStyle.backgroundColor }]}>
+          <Button label="Tous les genres" onPress={() => { setGenre(null); setPicker(false); }} />
+          <FlatList data={genres.filter(item => !rayon || item.rayon === rayon)} keyExtractor={item => String(item.id)}
+            renderItem={({ item }) => <Button label={item.label} selected={genre?.id === item.id}
+              onPress={() => { setGenre(item); setPicker(false); }} />} />
+        </View>
+      </View>
+    </Modal>
+  </View>;
+}
+
+const styles = StyleSheet.create({
+  flex: { flex: 1 }, hidden: { display: 'none' },
+  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: 6 },
+  input: { flex: 1, minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ad9f97', borderRadius: 8 },
+  button: { minHeight: 44, paddingHorizontal: 8, justifyContent: 'center', alignItems: 'center', borderRadius: 6 },
+  rayon: { width: 28, height: 28 }, selected: { backgroundColor: bdovored }, white: { color: 'white' },
+  heading: { padding: 10, fontWeight: '700' }, title: { fontWeight: '600' },
+  row: { minHeight: 52, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderColor: '#b7aaa1' },
+  cover: { width: 36, height: 48 }, largeCover: { width: 88, height: 118 },
+  preview: { padding: 8, backgroundColor: '#faf5ef' }, darkPreview: { backgroundColor: '#312b26' },
+  tile: { width: 96, marginRight: 8 }, overlay: { flex: 1, backgroundColor: '#0007', justifyContent: 'flex-end' },
+  sheet: { maxHeight: '70%', paddingBottom: 20, borderTopLeftRadius: 14, borderTopRightRadius: 14 },
+});

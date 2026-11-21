@@ -62,13 +62,13 @@ const GETHeaders = new Headers({
   'Content-Type': 'application/json',
 });
 
-const fetchZIP = async (url) => {
+const fetchZIP = async (url, signal) => {
   await AuthManager.initialize();
   if (global.forceOffline) { throw new Error('Mode hors ligne activé.'); }
   const token = AuthManager.getToken();
   const headers = new Headers(GETHeaders);
   if (token) { headers.set('Authorization', 'Bearer ' + token); }
-  const response = await fetch(url, { method: 'GET', headers, credentials: 'omit' });
+  const response = await fetch(url, { method: 'GET', headers, credentials: 'omit', ...(signal ? { signal } : {}) });
   if (response.status === 401) {
     if (token) { await AuthManager.clearSession(token); }
     throw new AuthManager.AccountError('Votre session a expiré. Veuillez vous reconnecter.', 'invalid_session', 401);
@@ -255,6 +255,12 @@ export async function fetchSerie(id_serie, callback, params = {}) {
       mode: 1,
     }, ...params
   });
+}
+
+// The catalogue returns compact rows. Fetch the full record only when opening a sheet.
+export async function catalogueRequest(data, params, signal) {
+  const response = await fetchZIP(concatParamsToURL(getBaseURL(data), params), signal);
+  return response.json();
 }
 
 export async function fetchSerieByTerm(term, callback, params = {}) {
