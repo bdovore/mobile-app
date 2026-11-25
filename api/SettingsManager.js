@@ -30,6 +30,7 @@ import { Dimensions, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Helpers from '../api/Helpers';
 import NetInfo from "@react-native-community/netinfo";
+import * as AuthManager from './AuthManager';
 
 
 // Defined global parameters that are saved/restored
@@ -44,8 +45,6 @@ let globs = [
   ['localTimestamp',         null],
   ['login',                  null],
   ['openCollection',         false],
-  ['passwd',                 null],
-  ['token',                  null],
   ['retractableButtons',     false],
   ['showBDovoreIds',         false],
   ['showConnectionMessages', false],
@@ -79,7 +78,7 @@ class CSettingsManager {
     global['retractableButtons'] = this.isTablet() ? false : true;
 
     // Fetched saved values for each global variable
-    AsyncStorage.multiGet(globs.map(v => v[0])).then(response => {
+    AsyncStorage.multiGet(globs.map(v => v[0])).then(async response => {
       const setKey = (name, value) => {
         if (value !== null && value !== undefined) {
           if (value === '0' || value === '1') {
@@ -92,6 +91,7 @@ class CSettingsManager {
       response.forEach((v) => {
         setKey(v[0], v[1]);
       });
+      await AuthManager.initialize();
       global.settingsLoaded = true;
     }).catch(() => {
       global.settingsLoaded = true;
@@ -105,7 +105,7 @@ class CSettingsManager {
       global.connectionType = state.type;
       global.isConnected = state.isConnected != null ? state.isConnected : state.isInternetReachable;
       //console.debug('Global connection state: ' + global.isConnected);
-      if (showConnectionMessages) {
+      if (global.showConnectionMessages) {
         Helpers.showToast(false, 'Connexion ' + state.type + (state.isConnected ? ' activée' : ' désactivée'));
       }
     }

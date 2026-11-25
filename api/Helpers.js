@@ -126,7 +126,7 @@ export function setAsyncStorageBoolValue(name, value) {
 }
 
 export function getLoggedUserid() {
-  return parseInt(global.token.replace(/([0-9]+).*/, '$1')) * 1209 + 951;
+  return global.currentUser?.public_id ?? (global.collectionOwnerId ? global.collectionOwnerId * 1209 + 951 : null);
 }
 
 export function checkConnection() {
@@ -140,7 +140,7 @@ export function checkConnection() {
 }
 
 export function getUserid() {
-  return parseInt(global.token.replace(/([0-9]+).*/, '$1')) * 1209 + 951;
+  return global.currentUser?.public_id ?? (global.collectionOwnerId ? global.collectionOwnerId * 1209 + 951 : null);
 }
 
 export function saveTimestamp() {

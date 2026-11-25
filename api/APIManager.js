@@ -26,15 +26,17 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-import { Platform } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { InAppBrowser } from 'react-native-inappbrowser-reborn';
 
 import * as Helpers from '../api/Helpers';
 import SettingsManager from './SettingsManager';
+import * as AuthManager from './AuthManager';
+import { bdovoreBaseURL } from './Config';
 
 const bdovoreUserAgent = 'bdovore ' + Platform.OS + ' v0.1';
 
-export const bdovoreBaseURL = 'https://www.bdovore.com';
+export { bdovoreBaseURL };
 const bdovoreBaseUserURL = bdovoreBaseURL + '/getjson?';
 
 export function getBaseURL(dataMode) {
@@ -42,7 +44,7 @@ export function getBaseURL(dataMode) {
 }
 
 export function getBaseUserURL(token, dataMode) {
-  return getBaseURL(dataMode) + '&API_TOKEN=' + encodeURI(token);
+  return getBaseURL(dataMode);
 }
 
 export function concatParamsToURL(url, params) {
@@ -61,74 +63,42 @@ const GETHeaders = new Headers({
 });
 
 const fetchZIP = async (url) => {
-  if (url.includes('TOKEN=offline')) {
-    const msg = 'Won\'t perform fetch with offline token: ' + url;
-    console.debug(msg);
-    throw msg;
+  await AuthManager.initialize();
+  if (global.forceOffline) { throw new Error('Mode hors ligne activé.'); }
+  const token = AuthManager.getToken();
+  const headers = new Headers(GETHeaders);
+  if (token) { headers.set('Authorization', 'Bearer ' + token); }
+  const response = await fetch(url, { method: 'GET', headers, credentials: 'omit' });
+  if (response.status === 401) {
+    if (token) { await AuthManager.clearSession(token); }
+    throw new AuthManager.AccountError('Votre session a expiré. Veuillez vous reconnecter.', 'invalid_session', 401);
   }
-
-  console.debug("fetchZIP: " + url);
-  return fetch(url, {
-    method: 'GET',
-    compress: true,
-    headers: GETHeaders,
-  });
+  if (token !== AuthManager.getToken()) { throw new AuthManager.AccountError('La session a changé.', 'session_changed'); }
+  if (!response.ok) { throw new Error('Le serveur est temporairement indisponible.'); }
+  const parseJSON = response.json.bind(response);
+  response.json = async () => {
+    const data = await parseJSON();
+    if (token !== AuthManager.getToken()) { throw new AuthManager.AccountError('La session a changé.', 'session_changed'); }
+    return data;
+  };
+  return response;
 };
 
 export function isValidToken() {
-  return global.token && global.token.match(/([0-9]+)-([0-9a-f]+)/);
+  return AuthManager.hasSession();
 }
 
 export function checkForToken(navigation = null, callback = null, loadingRetry = 0) {
   if (global.settingsLoaded === false) {
-    if (callback && loadingRetry < 20) {
-      setTimeout(() => {
-        checkForToken(navigation, callback, loadingRetry + 1);
-      }, 100);
+    if (callback && loadingRetry < 50) {
+      setTimeout(() => checkForToken(navigation, callback, loadingRetry + 1), 100);
     }
     return null;
   }
-
-  const hasOnlineToken = Boolean(isValidToken());
-  const hasOfflineToken = (typeof global.token == 'string' && global.token.startsWith('offline-'));
-  const hasAnyToken = (typeof global.token == 'string' && global.token.length > 0);
-  const hasStoredCredentials = Boolean(global.login && global.passwd);
-
-  try {
-    // Move to login page if no token available
-    if (hasOnlineToken) {
-      return callback ? callback() : global.token;
-    }
-    if (global.forceOffline && hasOfflineToken) {
-      return callback ? callback() : 'offline-';
-    }
-  } catch (error) {
-    console.log(error);
-  }
-
-  if (global.forceOffline && !hasOfflineToken) {
-    console.debug('Offline mode requested without offline token.');
-    if (navigation) {
-      return navigation.navigate('Login');
-    }
-    return null;
-  }
-
-  if ((!hasAnyToken || !hasOnlineToken) && hasStoredCredentials && !global.forceOffline) {
-    console.debug('undefined token -> relogin');
-    return reloginBDovore(navigation, callback);
-  }
-  if ((!hasAnyToken || !hasOnlineToken) && navigation) {
-    return navigation.navigate('Login');
-  }
-  if (callback) {
-    try {
-      callback();
-    } catch (error) {
-      console.debug(error);
-    }
-  }
-  return hasAnyToken ? global.token : null;
+  if (AuthManager.hasSession()) { return callback ? callback() : AuthManager.getToken(); }
+  if (global.forceOffline && global.collectionOwnerLogin) { return callback ? callback() : 'offline'; }
+  if (navigation) { navigation.navigate('Login'); }
+  return null;
 }
 
 export function fetchUserPrefs(navigation = null, callback = null) {
@@ -148,105 +118,15 @@ export function fetchUserPrefs(navigation = null, callback = null) {
 }
 
 export async function reloginBDovore(navigation, callback = null) {
-
-  console.debug("relogin!");
-  try {
-    if (global.isConnected) {
-      if (global.login && global.passwd) {
-        loginBDovore(global.login, global.passwd, (response) => {
-          if (response.error) {
-            console.debug(response.error);
-            if (navigation) {
-              navigation.navigate('Login');
-            }
-          } else if (callback) {
-            try {
-              callback();
-               if (navigation && navigation.canGoBack()) {  // si on a un navigator
-                  navigation.goBack();
-                } else if (navigation) {
-                  navigation.navigate('CoreTab');  // Solution de repli
-                }
-            } catch (error) {
-              console.debug(error);
-            }
-            return true;
-          }
-        });
-      }
-      else {
-        //console.debug(error);
-        if (navigation) {
-          navigation.navigate('Login');
-        }
-      }
-    } else {
-      console.debug('Not connected.');
-    }
-  } catch (error) {
-    console.debug(error);
-  }
+  if (AuthManager.hasSession()) { if (callback) { callback(); } return true; }
+  if (navigation) { navigation.navigate('Login'); }
   return false;
 }
 
 export function loginBDovore(pseudo, passwd, callback) {
-  const formatResult = (connected, token, error = '', timestamp = '') => {
-    return { connected, token, error, timestamp };
-  }
-
-  console.debug("Login...");
-  if (!pseudo) {
-    callback(formatResult(false, null, 'Veuillez renseigner le pseudo.'));
-    return;
-  }
-  if (!passwd) {
-    callback(formatResult(false, null, 'Veuillez renseigner le mot de passe.'));
-    return;
-  }
-
-  return fetch(bdovoreBaseURL + '/auth/gettoken', {
-    method: 'POST',
-    headers: {
-      'User-Agent': bdovoreUserAgent,
-      'Content-Type': 'application/x-www-form-urlencoded'
-    },
-    body: 'user_login=' + encodeURIComponent(pseudo) + '&user_password=' + encodeURIComponent(passwd)
-  })
-    .then(resp => resp.json())
-    .then(response => {
-      try {
-        if (response.Error === '') {
-          console.debug("New token: " + response.Token);
-          console.debug("  server timestamp: " + response.Timestamp);
-          global.token = response.Token;
-          global.serverTimestamp = response.Timestamp;
-          fetchUserPrefs(null, ()=>{;
-          //console.log(responseJson);
-          callback(formatResult(true, response.Token, '', response.Timestamp ?? null));
-          });
-        } else {
-          callback(formatResult(false, response.Token, response.Error));
-        }
-      } catch (error) {
-        console.debug(error);
-      }
-    })
-    .then(() => {
-      fetchSponsors((result) => {
-        if (result.error == '') {
-        //console.log("Fetched sponsors: ");
-        //console.log(result.items);
-        Helpers.setAndSaveGlobal('sponsorsList', JSON.stringify(result.items));
-        }
-    })})
-    .catch((error) => {
-      console.debug(error);
-      Helpers.showToast(true,
-        'Erreur de connexion au serveur.',
-        'Vérifiez la connexion internet.',
-        1500);
-      callback(formatResult(false, '', 'Erreur de connexion au serveur.\nVérifiez la connexion internet.'));
-    });
+  return AuthManager.login(pseudo, passwd)
+    .then(result => callback({ connected: true, token: result.token, error: '', timestamp: result.collection_timestamp }))
+    .catch(error => callback({ connected: false, token: null, error: error.message }));
 }
 
 export async function onConnected(navigation, successCb = () => { }, failCb = () => { }) {
@@ -313,7 +193,7 @@ export async function fetchJSON(request, context, callback, params = {},
               }
             })
             .catch((error) => {
-              console.debug(error);
+              callback(formatResult([], error.message || 'Le téléchargement a échoué.'));
             });
         }
         // Perform all pages request at once. It is far far faster than
@@ -324,7 +204,14 @@ export async function fetchJSON(request, context, callback, params = {},
         }
       })
       .catch((error) => {
-        if (retry > 0 && global.isConnected) {
+        if (error.code === 'session_changed') {
+          callback(formatResult([], error.message));
+          return;
+        }
+        if (error.code === 'invalid_session') {
+          if (context?.navigation) { context.navigation.navigate('Login'); }
+          callback(formatResult([], error.message));
+        } else if (retry > 0 && global.isConnected) {
           console.debug(error);
           if (global.verbose) {
             Helpers.showToast(true, 'Connexion perdue. Reconnexion en cours...', 'Tentative n°' + (5 - retry + 1));
@@ -504,8 +391,8 @@ export async function fetchAlbumComments(id_tome, callback, all = 0) {
 
 export async function sendAlbumComment(id_tome, callback, note = 0, comment = '') {
 
-  let token = checkForToken();
-  const url = concatParamsToURL(bdovoreBaseURL + '/albumcomment/writecomment' + '?API_TOKEN=' + encodeURI(token),
+  checkForToken();
+  const url = concatParamsToURL(bdovoreBaseURL + '/albumcomment/writecomment?',
     {
       id_tome: id_tome,
       note: note,
@@ -574,8 +461,8 @@ export async function fetchSponsors(callback, params = {}) {
 
 export async function updateCollection(func, callback, params = {}) {
 
-  let token = checkForToken();
-  const url = concatParamsToURL(bdovoreBaseURL + '/macollection/' + func + '?API_TOKEN=' + encodeURI(token) + '&api_version=2', params);
+  checkForToken();
+  const url = concatParamsToURL(bdovoreBaseURL + '/macollection/' + func + '?api_version=2', params);
 
   fetchZIP(url)
     .then(resp => resp.json())
@@ -697,8 +584,7 @@ export async function addProposition(keywords) {
   if (global.isConnected) {
     // navigation.push('PropositionWebView', { keyword: keywords });
     try {
-      let url = bdovoreBaseURL + '/proposition?';
-      url = concatParamsToURL(url, { 'API_TOKEN': global.token , keyword: keywords } );
+      const url = await AuthManager.openWeb({ type: 'album', keyword: keywords || '' });
       if (await InAppBrowser.isAvailable()) {
               const result = await InAppBrowser.open(url, {
                 // iOS Properties
