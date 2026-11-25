@@ -88,7 +88,7 @@ const onShareCollectionPress = () => {
   } else {
     Alert.alert('Partager ma collection',
       'Le lien partagé ne fonctionnera qu\'après avoir autorisé la consultation de ' +
-      'votre collection par d\'autres utilisateurs sur la page profil du site internet.',
+      'votre collection par d\'autres utilisateurs dans Compte > Mon profil.',
       [{
         text: "Oui",
         onPress: () => shareCollection()
@@ -294,7 +294,7 @@ function WishlistScreens({ navigation }) {
     } else {
       Alert.alert('Partager ma wishlist',
         'Le lien partagé ne fonctionnera que si vous avez autorisé la consultation de ' +
-        'votre collection par d\'autres utilisateurs sur la page profil du site internet.',
+        'votre collection par d\'autres utilisateurs dans Compte > Mon profil.',
         [{
           text: "Oui",
           onPress: () => shareWishlist()

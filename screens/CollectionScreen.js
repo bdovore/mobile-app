@@ -108,6 +108,7 @@ function CollectionScreen({ route, navigation }) {
   const [toggleElement, setToggleElement] = useState(0);
   const applyFiltersRef = useRef();
   const flatList = useRef();
+  const collectionRequest = useRef(0);
   const stateRefKeywords = useRef();
   stateRefKeywords.current = keywords;
 
@@ -226,6 +227,7 @@ function CollectionScreen({ route, navigation }) {
       setKeywords('');
       setSortMode(defaultSortMode);
       setLoading(true);
+      setErrortext('');
       setFilteredSeries(null);
       setFilteredAlbums(null);
       setProgressRate(0);
@@ -233,7 +235,10 @@ function CollectionScreen({ route, navigation }) {
       loadedItems = 0;
       loadingSteps = 3;
       loadTime = Date.now();
-      CollectionManager.fetchCollection(navigation, onFetchCollection);
+      const requestId = ++collectionRequest.current;
+      CollectionManager.fetchCollection(navigation, (result, type) => {
+        if (requestId === collectionRequest.current) onFetchCollection(result, type);
+      });
       if (global.verbose) {
         Helpers.showToast(false, 'Téléchargement de la collection...');
       }
@@ -242,6 +247,12 @@ function CollectionScreen({ route, navigation }) {
 
   const onFetchCollection = (result, type) => {
     setErrortext(result.error);
+    if (result.error) {
+      loadingSteps = 0;
+      cachedToken = null;
+      setLoading(false);
+      return;
+    }
 
     if (result.items) {
       loadedItems += parseFloat(result.items.length);
@@ -352,6 +363,11 @@ function CollectionScreen({ route, navigation }) {
             <Icon name='refresh' size={25} style={{ marginTop: 6, marginRight: 10 }} />
           </TouchableOpacity> : null}
       </View>
+      {errortext ? (
+        <Text style={CommonStyles.errorTextStyle} accessibilityRole="alert">
+          {errortext}
+        </Text>
+      ) : null}
       {loading ?
         <Progress.Bar animated={false} progress={progressRate} width={null} color={CommonStyles.progressBarStyle.color} style={CommonStyles.progressBarStyle} /> :
         null}
@@ -385,11 +401,6 @@ function CollectionScreen({ route, navigation }) {
         </View>
         :
         <View style={{ flex: 1, marginTop: 0 }}>
-          {errortext ? (
-            <Text style={CommonStyles.errorTextStyle}>
-              {errortext}
-            </Text>
-          ) : null}
           {<FlatList
             ref={flatList}
             initialNumToRender={6}

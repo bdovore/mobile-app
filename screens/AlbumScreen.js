@@ -39,6 +39,7 @@ import { CoverImage } from '../components/CoverImage';
 import { Icon } from '../components/Icon';
 import { RatingStars } from '../components/RatingStars';
 import * as APIManager from '../api/APIManager';
+import * as AuthManager from '../api/AuthManager';
 import * as Helpers from '../api/Helpers';
 import CollectionManager from '../api/CollectionManager';
 import CommentsPanel from '../panels/CommentsPanel';
@@ -298,23 +299,16 @@ function AlbumScreen({ route, navigation }) {
     }
   }
 
-  const onSubmitChanges = () => {
-    console.debug("Demande de modification");
-    if (global.isConnected) {
-      let url = APIManager.bdovoreBaseURL + '/Proposition?id_edition=' + album.ID_EDITION;
-      url = APIManager.concatParamsToURL(url, { 'API_TOKEN': global.token });
-      Linking.openURL(url);
-    }
-  }
+  const openContribution = async (body) => {
+    if (!global.isConnected) { return; }
+    try {
+      const url = await AuthManager.openWeb(body);
+      await Linking.openURL(url);
+    } catch (error) { Helpers.showToast(true, error.message); }
+  };
 
-  const onSubmitNewEdition = () => {
-    console.debug("Proposition edition");
-    if (global.isConnected) {
-      let url = APIManager.bdovoreBaseURL + '/Proposition?type=EDITION&id_tome=' + album.ID_TOME;
-      url = APIManager.concatParamsToURL(url, { 'API_TOKEN': global.token });
-      Linking.openURL(url);
-    }
-  }
+  const onSubmitChanges = () => openContribution({ type: 'correction', id_edition: album.ID_EDITION });
+  const onSubmitNewEdition = () => openContribution({ type: 'edition', id_tome: album.ID_TOME });
 
   const getTomeNumber = () => {
     const serie = CollectionManager.getSerieInCollection(album.ID_SERIE);

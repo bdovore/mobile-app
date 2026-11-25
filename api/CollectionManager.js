@@ -295,14 +295,21 @@ class CCollectionManager {
   fetchCollection(navigation, callback) {
 
     this.clearDatabase();
+    let failed = false;
 
     this.fetchSeries(navigation, (result) => {
+      if (failed) return;
+      failed = !!result.error;
       if (callback) callback(result, 0);
-      if (result.done) {
+      if (result.done && !result.error) {
         this.fetchAlbums(navigation, (result) => {
+          if (failed) return;
+          failed = !!result.error;
           if (callback) callback(result, 1);
-          if (result.done) {
+          if (result.done && !result.error) {
             this.fetchWishlist(navigation, (result) => {
+              if (failed) return;
+              failed = !!result.error;
               if (callback) callback(result, 2);
             });
           }
