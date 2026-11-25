@@ -173,7 +173,7 @@ export default function SearchScreen({ navigation }) {
         onPress={() => navigation.push('BarcodeScanner')}><Icon name="barcode-scan" size={30} color={CommonStyles.iconStyle.color} /></Pressable>
     </View>
     <View style={[styles.flex, !!query && styles.hidden]}>
-      <View style={styles.toolbar}>{rayons.map(value =>
+      <View style={[styles.toolbar, styles.rayonBar]}>{rayons.map(value =>
         <Button key={value} label={value || 'Tous'} selected={rayon === value}
           image={value && API.bdovoreBaseURL + '/style/guide/guide-rayon-' + value.toLowerCase() + '.png'}
           onPress={() => { setRayon(value); setGenre(null); }} />)}</View>
@@ -199,6 +199,7 @@ export default function SearchScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 }, hidden: { display: 'none' },
+  rayonBar: { marginTop: 8 },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-around', paddingHorizontal: 6 },
   input: { flex: 1, minHeight: 44, paddingHorizontal: 12, borderWidth: 1, borderColor: '#ad9f97', borderRadius: 8 },
   button: { minHeight: 44, paddingHorizontal: 8, justifyContent: 'center', alignItems: 'center', borderRadius: 6 },
